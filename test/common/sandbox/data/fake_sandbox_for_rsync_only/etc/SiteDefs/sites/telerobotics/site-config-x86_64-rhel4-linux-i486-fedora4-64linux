@@ -1,0 +1,118 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-i486-fedora4-linux
+
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+
+#CC              = /usr/bin/gcc32
+#CPLUSPLUS       = /usr/bin/gcc32
+
+CC              = /usr/bin/gcc -m32
+CPLUSPLUS       = /usr/bin/gcc -m32
+
+
+#CC_COMPILE_FLAGS	  += -m32
+#CPLUSPLUS_COMPILE_FLAGS	  += -m32
+LD_SHARED		  += -m32
+
+F77             := /usr/bin/g77 -m32
+LINKER_F77      := $(F77)
+LIBF77          := -lg2c
+LIBG2C          := /usr/lib/libg2c.so.0
+
+
+#==========================================================
+LIBXML2_LIBS	:= /usr/lib/libxml2.so.2.6.16
+HAVE_HDF5	:= false
+
+JPEG_LIBS	:= /usr/lib/libjpeg.so.62
+PGM_LIBS	:= /usr/lib/libnetpbm.so.10
+PNG_LIBS	:= /usr/lib/libpng12.so.0
+GIF_LIBS	:= /usr/lib/libgif.so.4
+TIFF_LIBS	:= /usr/lib/libtiff.so.3
+BZ2_LIBS	:= /usr/lib/libbz2.so.1
+GLUT_LIBS	:= /usr/lib/libglut.so.3
+FREETYPE_LIBS	:= /usr/lib/libfreetype.so.6
+
+#==========================================================
+# for Python
+export HAVE_PYTHON    := true
+PYTHONDIR             := /home/atbe/pkgs/i486-fedora3-linux/stow/python-2.4
+PYTHON_BIN            := /home/atbe/pkgs/$(YAM_NATIVE)/bin/python
+export PYTHON_INCDIR  := -I$(PYTHONDIR)/include/python2.4
+export PYTHON_LIBS    := -L$(PYTHONDIR)/lib -lpython2.4
+
+# for Python static library
+PYTHON_LIBS    += -L$(PYTHONDIR)/python2.4/config
+
+ifeq ($(PYTHONPATH),)
+#  PYTHONPATH    := /home/atbe/pkgs/src/Python/installs/i486-fedora4-linux/2.4.1/lib/python
+else
+#  PYTHONPATH    := $(PYTHONPATH):/home/atbe/pkgs/src/Python/installs/i486-fedora4-linux/2.4.1/lib/python
+endif
+#export  PYTHONPATH
+
+#==========================================================
+HAVE_IV         := false
+HAVE_COIN       := true
+
+# needed for Doxygen documentation generation
+COININC         := /home/atbe/pkgs/i486-fedora4-linux/stow/Coin-2.4.4/include
+SOXTINC         := /home/atbe/pkgs/i486-fedora4-linux/stow/SoXt-1.2.2/include
+
+COIN_INCDIR     :=  \
+                -I/home/atbe/pkgs/i486-fedora4-linux/stow/Coin-2.4.4/include \
+                -D_REENTRANT -DCOIN3D
+
+COIN_LIBS       := \
+                -L/home/atbe/pkgs/i486-fedora4-linux/stow/Coin-2.4.4/lib \
+                -lCoin \
+                 -L/home/atbe/pkgs/i486-fedora4-linux/stow/simage-1.6.1/lib -lsimage
+
+export GL_LIBS          = -Wl,-Bdynamic -L/usr/X11R6/lib -lGLU -lGL
+
+#==========================================================
+MOTIF_LIBS	:= /usr/X11R6/lib/libXm.so.3
+GTK_LIBS        := /usr/lib/libgtk-x11-2.0.so.0
+GTK_INCLUDES	:= -I/usr/include/glib-2.0 \
+                   -I/usr/lib64/glib-2.0/include \
+		   -I/usr/include/gtk-2.0 \
+		   -I/usr/lib64/gtk-2.0/include \
+		   -I/usr/include/atk-1.0 \
+		   -I/usr/include/pango-1.0
+
+HAVE_SOGTK = false
+SOGTK_CFLAGS = $(GTK_INCLUDES) -DUSING_SOGTK -I/home/atbe/pkgs/i486-fedora3-linux/stow/SoGtk-Aug05-2003-packedDec03/include
+SOGTK_LIBS = -L/home/atbe/pkgs/i486-fedora3-linux/stow/SoGtk-Aug05-2003-packedDec03/lib -lSoGtk
+
+HAVE_SOXT := true
+SOXT_CFLAGS = -I/home/atbe/pkgs/i486-fedora4-linux/stow/SoXt-1.2.2/include
+SOXT_LIBS = -L/home/atbe/pkgs/i486-fedora4-linux/stow/SoXt-1.2.2/lib -lSoXt
+XT_LIBS   := -lXmu -lXt -lXi -lXpm /usr/X11R6/lib/libXp.so.6
+
+
+HAVE_SOQT := false
+SOQT_CFLAGS = -I/home/atbe/pkgs/i486-fedora4-linux/stow/SoQt-1.4.1/include \
+              -I/usr/lib/qt-3.3/include
+SOQT_LIBS = -L/home/atbe/pkgs/i486-fedora4-linux/stow/SoQt-1.4.1/lib -lSoQt
+QT_LIBS     := -L/usr/lib/qt-3.3/lib -lqt-mt
+
+
+#               $(MOTIF_LIBS)  -lXmu  -lXt -lXi -lXpm -lXp -lX11
+
+# removed   -lXpm -lX11
+
+# needed by libXt
+# SOXT_LIBS += -L/usr/X11R6/lib -lSM -lICE

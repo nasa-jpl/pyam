@@ -1,0 +1,101 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+#==========================================================
+include $(SITEDEFSHOME)/site.common
+include $(SITEDEFSHOME)/sites/site.gcc
+
+# needed for mexif21 module
+LIBGCC = -L/home/atbe/pkgs/src/gcc/gcc-2.7.2/$(YAM_TARGET) -lgcc
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+#==========================================================
+# are we building our own shared libraries?
+ifeq ($(BUILDING_SHARED_LIBS),)
+  BUILDING_SHARED_LIBS = true
+endif
+export BUILDING_SHARED_LIBS
+
+ifeq ($(BUILDING_SHARED_LIBS),true)
+#  CC_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+#  CPLUSPLUS_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  CC_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  CPLUSPLUS_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  GCC_EXEC_PREFIX = /home/atbe/pkgs/lib/sparc-sunos5/gcc-lib/sparc-sun-solaris2.5/2.7.2
+  LD_SHARED = $(LD) -G -L$(YAM_ROOT)/lib/$(YAM_NATIVE) -L$(GCC_EXEC_PREFIX)
+  export LD_SHARED
+endif
+
+#==========================================================
+# are we building with third party shared libraries?
+CC_DEFINES += -DUSING_TCLTK80
+CPLUSPLUS_DEFINES += -DUSING_TCLTK80
+
+ifneq ($(USE_SHARED_LIBS),false)
+ SHARED_LIBDIR = /home/atbe/pkgs/lib/$(YAM_TARGET)-shared
+ CC_LINK_FLAGS += -L$(SHARED_LIBDIR) -R$(SHARED_LIBDIR) -R$(YAM_ROOT)/lib/$(YAM_NATIVE)
+ CPLUSPLUS_LINK_FLAGS += -L$(SHARED_LIBDIR) -R$(SHARED_LIBDIR) -R$(YAM_ROOT)/lib/$(YAM_NATIVE)
+endif
+
+#==========================================================
+# for X11
+export X11_INCDIR       = -I/usr/openwin/include
+#export X11_LIBDIR       = /usr/X11R6/lib
+
+#==========================================================
+# for TCL
+export HAVE_TCL		= true
+export TCL_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+export TCL_INCDIR	= -I/home/atbe/pkgs/include/tcl8.0
+export TCL_LIBS		= -L$(TCL_LIBDIR) -ltcl8.0 -ldl -lm
+
+# for TK
+export HAVE_TK		= true
+export TK_LIBDIR	= $(TCL_LIBDIR)
+export TK_INCDIR	= $(TCL_INCDIR) -I/home/atbe/pkgs/include/tk8.0
+export TK_LIBS		= -L$(TK_LIBDIR) -ltk8.0 -lX11 $(TCL_LIBS)
+
+# for TIX
+export HAVE_TIX		= true
+export TIX_LIBDIR	= $(TCL_LIBDIR)
+export TIX_INCDIR	= $(TK_INCDIR) -I/home/atbe/pkgs/include
+export TIX_LIBS		= -L$(TIX_LIBDIR) -ltix4.1.8.0 $(TK_LIBS)
+
+#==========================================================
+# Motif flags
+export MOTIF_LIBS = -L/usr/dt/lib -R/usr/dt/lib -lXm
+export MOTIF_INCDIR = -I/usr/dt/include
+
+#==========================================================
+# this extra library is needed for using with the sparcSol2.5 libraries
+NDDS_LIBS += -lthread
+NDDS_SOLIBS += -lthread
+
+#==========================================================
+# set MATLAB_LIBS to its target specific path
+export HAVE_MATLAB      = true
+export HAVE_SIMULINK    = true
+export HAVE_RTW         = true
+export MATLAB_INCDIR    = -I$(MATLAB)/extern/include
+export SIMULINK_INCDIR  = $(MATLAB_INCDIR) -I$(MATLAB)/simulink/include
+export RTW_INCDIR       = $(SIMULINK_INCDIR) -I$(MATLAB)/rtw/c/libsrc -I$(MATLAB)/rtw/c/src
+export MATLAB_LIBDIR    = $(MATLAB)/extern/lib/sol2
+export MATLAB_LIBS      = -R$(MATLAB_LIBDIR) -L$(MATLAB_LIBDIR) -leng -lmat -lmx -lmi -lut
+
+#==========================================================
+# for Mathematica
+export HAVE_MATHEMATCA = true
+export MATHEMATICA_LIBS = \
+  -L/v/math/AddOns/MathLink/DevelopersKits/Solaris/CompilerAdditions -lML
+
+#==========================================================
+# for Tmath
+export HAVE_TMATH	= true
+export TMATH_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+export TMATH_INCDIR	=
+export TMATH_LIBS	= -L$(TMATH_LIBDIR) -ltmath -lexttools \
+			   $(MATLAB_LIBS) $(MATHEMATICA_LIBS) \
+			   -ltmathkernel -lstdc++

@@ -1,0 +1,3 @@
+WARNING: Skipping sending email because both 'email_from_address' and 'email_to_address' need to be defined (eithier in the pyamrc file or on the command line)
+#define MYNEWMODULE_DVERSION_RELEASE "MyNewModule-R1-00a"
+OK

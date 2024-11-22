@@ -1,0 +1,120 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-sparc-sunos5.8
+
+
+GCCDIR	:= /home/atbe/pkgs/sparc-sunos5.9/stow/gcc-3.3.1
+F77		:= $(GCCDIR)/bin/g77 -R$(GCCDIR)/lib
+LINKER_F77      := $(F77)
+
+ifeq ($(USE_PURIFY),true)
+  CC = $(PURIFY) $(GCCDIR)/bin/gcc -g
+  CPLUSPLUS := $(PURIFY) $(CC) -g
+else
+  CC = $(GCCDIR)/bin/gcc
+  CPLUSPLUS := $(CC)
+endif
+
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+#==========================================================
+# for TCL
+  export HAVE_TCL	= true
+  export TCL_VERSION	= 8.0
+  export TCL_SRCDIR	= /home/atbe/pkgs/src/tcl+tk/tcl8.4.4
+  export TCL_LIBDIR	= /home/atbe/pkgs/$(YAM_TARGET)/lib
+  export TCL_INCDIR	= -I/home/atbe/pkgs/$(YAM_TARGET)/include -DUSE_NON_CONST
+  export TCL_LIBS	= -L$(TCL_LIBDIR) -ltcl8.4 -ldl -lm
+
+  # for TK
+  export HAVE_TK	= true
+  export TK_VERSION	= 8.0
+  export TK_SRCDIR	= /home/atbe/pkgs/src/tcl+tk/tk8.4.4
+  export TK_LIBDIR	= $(TCL_LIBDIR)
+  export TK_INCDIR	= $(TCL_INCDIR)
+  export TK_LIBS	= -L$(TK_LIBDIR) -ltk8.4 -lX11 $(TCL_LIBS)
+
+  # for TIX
+  export HAVE_TIX	= false
+  export TIX_LIBDIR	= $(TCL_LIBDIR)
+  export TIX_INCDIR	= $(TK_INCDIR) -I/home/atbe/pkgs/include/tix8.2/generic
+  export TIX_LIBS	= -L$(TIX_LIBDIR) -ltix8.2 $(TK_LIBS)
+
+#==========================================================
+export IV_FL_LIB        = -L/home/atbe/pkgs/$(YAM_TARGET)/lib -lFL-$(IV_VERSION)
+
+#==========================================================
+# for libxml2 (XML parser library - settings obtained from `xml2-config --cflags` & `xml2-config --libs` )
+#LIBXML2_CFLAGS = -I/usr/include/libxml2
+#LIBXML2_LIBS = -L/usr/lib -R/usr/lib -lxml2 -lz -lpthread -lm -lsocket -lnsl
+
+XML2DIR	       := /home/atbe/pkgs/sparc-sunos5.9/stow/libxml2-2.6.4
+LIBXML2_CFLAGS := -I$(XML2DIR)/include/libxml2
+LIBXML2_LIBS   := -L$(XML2DIR)/lib -R$(XML2DIR)/lib -lxml2 -lz -lpthread -lm -lsocket -lnsl
+
+#==========================================================
+# disabled MEX builds for this old target
+SKIP_MEX_BUILD	?= false
+
+#==========================================================
+JPEG_INCDIR		:= -I/home/atbe/pkgs/sparc-sunos5.9/include
+
+#==========================================================
+TIFF_DIR		:= /home/atbe/pkgs/sparc-sunos5.9/stow/tiff-v3.5.5
+export TIFF_LIBDIR	:= $(TIFF_DIR)/lib
+export TIFF_INCDIR	:= $(TIFF_DIR)/include
+export TIFF_LIBS	:= -L$(TIFF_LIBDIR) -ltiff
+
+#==========================================================
+# getting a lot of undefined symbols with the existing Scope version
+HAVE_SCOPE = true
+SCOPEGCCEXT=gcc2.95
+STETHOSCOPEHOME=$(RTIHOME)/scope.7.0f
+RTILIBHOME=$(RTIHOME)/rtilib.4.2c
+
+export SCOPE_LIBS	= $(STETHOSCOPEHOME)/lib/$(RTI_TARGET)$(SCOPEGCCEXT)/libscope70tcp.so \
+       $(STETHOSCOPEHOME)/lib/$(RTI_TARGET)$(SCOPEGCCEXT)/libxmlparse.so \
+       $(RTILIBHOME)/lib/$(RTI_TARGET)$(SCOPEGCCEXT)/libutilsip.so -lpthread
+
+# $(RTILIBHOME)/lib/$(RTI_TARGET)$(SCOPEGCCEXT)/libutilsip.a
+
+#==========================================================
+# for SWIG
+#SWIG	:= /home/atbe/pkgs/sparc-sunos5.9/stow/SWIG-1.3.21/bin/swig
+SWIG	:=
+
+#==========================================================
+# for GraphViz
+HAVE_GRAPHVIZ	     := true
+GRAPHVIZ_VERSION=2.2
+GRAPHVIZ_LIBDIR=/home/atbe/pkgs/sparc-sunos5.9/stow/graphviz-${GRAPHVIZ_VERSION}/lib/graphviz
+# parent directory of "graphviz/" subdirectory
+GRAPHVIZ_INCDIR=/home/atbe/pkgs/sparc-sunos5.9/stow/graphviz-${GRAPHVIZ_VERSION}/include
+
+#==========================================================
+# Library to read/write PGM files
+export PGM_DIR = /home/atbe/pkgs/sparc-sunos5.9/stow/netpbm-10.18.13
+export PGM_LIBDIR = $(PGM_DIR)/link
+export PGM_INCDIR = $(PGM_DIR)/include
+export PGM_LIBS   = -L$(PGM_LIBDIR) -lnetpbm
+
+#========+=================================================
+# Library to read/write PNG files
+export PNG_LIBDIR = /home/atbe/pkgs/sparc-sunos5.9/lib
+export PNG_INCDIR = /home/atbe/pkgs/sparc-sunos5.9/include
+export PNG_LIBS   = -L$(PNG_LIBDIR) -lpgm
+
+#==========================================================
+#==========================================================

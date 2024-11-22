@@ -1,0 +1,287 @@
+#!/usr/bin/env python
+"""Build modules whose current builds are obsolete."""
+
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
+
+import argparse
+import os
+import subprocess
+import sys
+
+import getpass
+import platform
+
+
+
+class PyamException(Exception):
+
+    """Exception for pyam non-zero exit status."""
+
+
+def pyam_path():
+    """Return path to pyam executable."""
+    bin_path = os.path.dirname(os.path.realpath(__file__))
+    sibling_candidate = os.path.join(bin_path, 'pyam')
+
+    return sibling_candidate if os.path.exists(sibling_candidate) else 'pyam'
+
+from yam import email_utils
+
+# need to import in pyam as a module. However 'pyam' is missing the .py
+# extension, and hence the normal import will not work.
+if sys.version_info.major < 3 or sys.version_info.minor <= 4:
+    # imp module is deprecated in recent versions of python 3 (but there
+    # till at least 3.4)
+    import imp
+    pyam = imp.load_source('pyam',pyam_path())
+    import pyam
+else:
+    # print('KKK', pyam_path())
+
+    # WORKS: solution from https://stackoverflow.com/questions/2601047/import-a-python-module-without-the-py-extension/43602645#43602645. Have to use SourceFileLoader to load a module from a file without the .py extension
+
+    # from https://www.dev2qa.com/how-to-import-a-python-module-from-a-python-file-full-path/
+    # also https://thanethomson.com/2016/11/21/making-statik-backwards-compatible/
+    import importlib
+    from importlib.machinery import SourceFileLoader
+
+    pyam_spec = importlib.util.spec_from_file_location('pyam', loader=SourceFileLoader('pyam', pyam_path()))
+    #print('TTTT', pyam_spec)
+    pyam = importlib.util.module_from_spec(pyam_spec)
+    pyam_spec.loader.exec_module(pyam)
+    # print('NNNN', pyam.__name__)
+
+#from pyam import CommancdInterpreter
+config_dict = pyam.read_configuration()
+
+#sbrd = CommancdInterpreter.sandbox_root_directory()
+#sbrd = sandbox_path
+
+
+from yam import file_system_utils
+try:
+    tmp_root_directory = file_system_utils.find_sandbox_root(os.getcwd())
+except:
+    tmp_root_directory = " "
+
+def pyam(arguments, sandbox_path,
+         quiet=True, stdout=None, stderr=None, timeout=None, nolog=False):
+    """Run pyam command-line utility."""
+    print('Running pyam with arguments:', arguments)
+    process = subprocess.Popen(
+        (['timeout', str(timeout)] if timeout else []) +
+        [pyam_path(), '--non-interactive'] +
+        (['--quiet'] if quiet else []) +
+        (['--no-log'] if nolog else []) +
+        (['--sandbox-root-directory=' + sandbox_path]
+         if sandbox_path else []) +
+        arguments,
+        stdout=stdout,
+        stderr=stderr)
+
+    output = process.communicate()[0]
+
+    if timeout and process.returncode == 124:
+        print('Timed out', file=sys.stderr)
+    elif process.returncode != 0:
+        raise PyamException()
+
+    return output.decode('utf-8') if output else output
+
+
+def main():
+    """Main."""
+
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument('--quiet', action='store_true',
+                        help='do not print progress messages')
+
+    parser.add_argument('--package', action='store',
+                        help='create the temporary sandbox using a specified '
+                             'package')
+
+    parser.add_argument(
+        '--modules', nargs='*',
+        default=pyam(['obsolete-builds'],
+                     nolog=True,
+                     sandbox_path=None,
+                     stdout=subprocess.PIPE).split(),
+        help='modules to build; all obsolete module builds will be built if '
+             'none are specified')
+
+    parser.add_argument(
+        '--dependencies', nargs='*', default=[],
+        help='additional modules to be added to the sandbox for purposes of '
+             'building; these are in addition to the normal dependencies '
+             'declared in the database')
+
+    parser.add_argument(
+        '--exclude', nargs='*', default=[],
+        help='do not make build releases of these modules')
+
+    parser.add_argument(
+        '--pre-save-shell-command', action='store',
+        default='svn revert --recursive . || git restore . ',
+        help='run shell command in each module before saving')
+
+    parser.add_argument(
+        '--timeout', type=float, default=None,
+        help='do not build rebuild longer than this')
+
+    args = parser.parse_args()
+
+    build_modules = list(set(args.modules) - set(args.exclude))
+    # the list of modules for which fresh build releases are being
+    # requested
+    print('\nOBSOLETE modules=', ', '.join(args.modules))
+    # the actual list of modules with for which build releases will be made
+    print('\nBUILD RELEASE modules=', ', '.join(build_modules), '\n')
+    del args.modules
+    del args.exclude
+
+    if not build_modules:
+        if not args.quiet:
+            print('No modules with obsolete build releases', file=sys.stderr)
+        return 0
+
+    import tempfile
+    temporary_directory = tempfile.mkdtemp(dir='.')
+    subprocess.run(["chmod","775",temporary_directory])
+
+    sandbox_path = os.path.join(temporary_directory, 'sandbox')
+
+    if args.package:
+        setup_arguments = [args.package]
+    else:
+        setup_arguments = ['--modules'] + args.dependencies + build_modules
+
+    try:
+        print('\nRunning pyam setup for', ' '.join(setup_arguments))
+        pyam(['setup',
+              '--directory=' + sandbox_path,
+              ] + setup_arguments,
+             sandbox_path=None,
+             quiet=False)
+        # quiet=args.quiet)
+
+    except PyamException:
+        return 2
+
+    # build mklinks explicitly since setup does not seem to be doing it
+    if not args.quiet:
+        print(
+            '--->  Building sandbox mklinks',
+            file=sys.stderr)
+    subprocess.check_call(
+        'make mklinks >& log.mklinks',
+        cwd=sandbox_path,
+        shell=True,
+        env=dict((k, os.environ[k]) for k in os.environ.keys()
+                 if k not in ['YAM_ROOT', 'YAM_VERSIONS']))
+
+    if not args.quiet:
+        print(
+            "--->  Building sandbox ...",
+            file=sys.stderr)
+
+    # pyam(['checkout',  '--release=main'] + build_modules,
+    pyam(['checkout', '--branch=-'] + build_modules,
+         sandbox_path=sandbox_path,
+         quiet=False)
+
+    # build all the module docs
+    if not args.quiet:
+        print(
+            '--->  Building sandbox docs',
+            file=sys.stderr)
+    subprocess.check_call(
+        'make -j 20 docs >& log.docs',
+        cwd=sandbox_path,
+        shell=True,
+        env=dict((k, os.environ[k]) for k in os.environ.keys()
+                 if k not in ['YAM_ROOT', 'YAM_VERSIONS']))
+
+    checked_out_modules = set(build_modules)
+
+    # save each of the modules
+    unsaved_modules = set()
+    saved_modules = set()
+    for module in checked_out_modules:
+        if args.pre_save_shell_command:
+            if not args.quiet:
+                print(
+                    '--->  Running shell command "{command}" in module '
+                    '"{module}"'.format(
+                        command=args.pre_save_shell_command,
+                        module=module),
+                    file=sys.stderr)
+            try:
+                subprocess.check_call(
+                    args.pre_save_shell_command,
+                    cwd=os.path.join(sandbox_path, 'src', module),
+                    shell=True,
+                    env=dict((k, os.environ[k]) for k in os.environ.keys()
+                             if k not in ['YAM_ROOT', 'YAM_VERSIONS']))
+            except subprocess.CalledProcessError:
+                continue
+
+        try:
+            if not args.quiet:
+                print(
+                    '--->  Saving "{module}" module '.format(
+                        module=module),
+                    file=sys.stderr)
+            # We detect build failures via symlink checking.
+            # pyam(['save', '--no-pre-save-hooks', '--no-check-link-modules'] +
+            pyam(['save', '--no-check-link-modules'] +
+                 [module],
+                 sandbox_path=sandbox_path,
+                 quiet=args.quiet)
+            if not args.quiet:
+                print(
+                    '--->  save SUCCEEDED for "{module}" module '.format(
+                        module=module),
+                    file=sys.stderr)
+            saved_modules.add(module)
+        except:    # PyamException:
+            if not args.quiet:
+                print(
+                    '--->  save FAILED for "{module}" module '.format(
+                        module=module),
+                    file=sys.stderr)
+            unsaved_modules.add(module)
+
+    print('\nThese modules were saved:',
+          file=sys.stderr)
+    for module in saved_modules:
+        print(module, file=sys.stderr)
+
+    modules_with_errors = (
+        set(build_modules) - checked_out_modules) | unsaved_modules
+    if modules_with_errors:
+        print('\nTemporary sandbox: {sandbox}'.format(sandbox=sandbox_path),
+              file=sys.stderr)
+
+        print('\nThese modules were not able to be built/saved:',
+              file=sys.stderr)
+        for module in modules_with_errors:
+            print(module, file=sys.stderr)
+
+        return 2
+
+    else:
+        # Clean up only on success.
+        print('\nDeleting {sandbox} build sandbox'.format(sandbox=sandbox_path))
+        return 0
+
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        sys.exit(2)

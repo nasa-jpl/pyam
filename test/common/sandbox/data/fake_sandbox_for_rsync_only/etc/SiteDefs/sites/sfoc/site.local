@@ -1,0 +1,91 @@
+# site specific stuff common to all site-config files
+
+#==========================================================
+RTIHOME = /home/cm/CM/hsslib
+
+#==========================================================
+# for RTI's Stethoscope
+HAVE_SCOPE = false
+#SCOPE_50 = true
+
+#==========================================================
+# load in generic flag settings
+include $(SITEDEFSHOME)/sites/shared.mk
+
+SCOPEGCCEXT =
+HAVE_TRAMEL	= false
+HAVE_NDDS	=
+
+# the TiX configure script is unable to find "gcc" without this
+PATH := $(ETS)/bin:$(PATH)
+
+#===========================================
+# C compiler and flags for the native target
+
+#export CC		= $(ETS)/bin/gcc -ansi -pedantic
+export CC		= $(ETS)/bin/gcc
+#export CC		= $(ETSHSS)/bin/gcc -ansi -pedantic
+#export CC_DEFINES              += -DHSS_MT_TCL
+
+#CC_COMPILE_FLAGS += $(FWRITABLE_STRINGS_OPT)
+
+#==========================================================
+# C++ compiler and flags for the native target
+
+export CPLUSPLUS		= $(ETS)/bin/gcc
+#export CPLUSPLUS		= $(ETSHSS)/bin/gcc
+export CPLUSPLUS_INCLUDES	:= $(CC_INCLUDES)
+
+#CPLUSPLUS_COMPILE_FLAGS += $(FWRITABLE_STRINGS_OPT)
+
+#==========================================================
+#export TCL_VERSION      = 7.4
+#export TCL_SRCDIR       = $(YAM_ROOT)/../tcl7
+#export TCL_LIBDIR	= $(YAM_ROOT)/../tcl7
+#export TCL_INCDIR	= -I$(YAM_ROOT)/../../lib_include_local/tcl7
+#export TCL_LIBS		= -L$(YAM_ROOT)/lib/$(YAM_TARGET) \
+#				 $(TCL_LIBDIR)/tcl7.oa -lMtclStubs -lm
+#export TCL_LIBX		= -L$(YAM_ROOT)/lib/$(YAM_TARGET) \
+#				 -lMtclStubs -lm -Xlinker --rpath /usr/openwin/lib
+#
+## for TK
+#export TK_VERSION       = 4.0
+#export TK_SRCDIR        = $(YAM_ROOT)/../tk4
+#export TK_LIBDIR	= $(YAM_ROOT)/../tk4
+#export TK_INCDIR	= $(TCL_INCDIR) -I$(YAM_ROOT)/../../lib_include_local/tk4
+#export TK_LIBS		= $(TK_LIBDIR)/tk4.oa -lX11 \
+#				$(TCL_LIBS)
+
+#==========================================================
+# for TRAMEL
+export TRAMEL_INCDIR	= -I$(YAM_ROOT)/include/Tramel
+export TRAMEL_LIBDIR	=
+export TRAMEL_LIBS	= -ltramel
+
+#==========================================================
+# for Mesa
+#export MESA_INCDIR	= -I/home/atbe/pkgs/include
+#export MESA_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+#export MESA_LIBS	= $(MESA_LIBDIR)/libMesaGLU.a $(MESA_LIBDIR)/libMesaGL.a
+export MESA_INCDIR      = -I$(ETS)/include
+export MESA_LIBDIR      = $(ETS)/lib
+#export MESA_INCDIR      = -I$(ETSHSS)/include
+#export MESA_LIBDIR      = $(ETSHSS)/lib
+export MESA_LIBS        = $(MESA_LIBDIR)/libMesaGLU.a $(MESA_LIBDIR)/libMesaGL.a
+
+#==========================================================
+# for RTI's NDDS
+export NDDS_INCDIR	=
+export NDDS_LIBS	=
+
+#==========================================================
+# for Matlab
+export HAVE_MATLAB      = false
+export HAVE_SIMULINK    = false
+export HAVE_RTW         = false
+export MATLAB		= /opt/matlab
+export MATLAB_INCDIR	= -I$(MATLAB)/extern/include
+export SIMULINK_INCDIR  = $(MATLAB_INCDIR) -I$(MATLAB)/simulink/include
+export RTW_INCDIR       = $(SIMULINK_INCDIR) -I$(MATLAB)/rtw/c/libsrc -I$(MATLAB)/rtw/c/src
+export MATLAB_LIBDIR    =
+export MATLAB_LIBS      =

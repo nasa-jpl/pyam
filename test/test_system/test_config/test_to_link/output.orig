@@ -1,0 +1,7 @@
+WORK_MODULES = Dshell++
+               DshellEnv/DshellEnv-R1-64e
+BRANCH_Dshell++  = Dshell++-R4-06g  my_branch
+# BRANCH_DshellEnv = DshellEnv-R1-64e
+LINK_MODULES = Darts/Darts-R3-15g-Build02 \
+# BRANCH_Darts     = Darts-R3-15g
+OK

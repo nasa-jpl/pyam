@@ -1,0 +1,101 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-i486-fedora8-linux
+
+#================================================
+CPLUSPLUS_COMPILE_FLAGS	  += -I/usr/lib64
+
+F77             = /usr/bin/g77
+LINKER_F77      := $(F77)
+LIBF77          := -lg2c
+LIBG2C          := /usr/lib64/libg2c.so.0
+
+
+
+
+
+#================================================
+HAVE_PYTHON	:= true
+PYTHONDIR             := /usr
+PYTHON_BIN            := $(PYTHONDIR)/bin/python
+PYTHON_INCDIR := -I/usr/include/python2.5
+PYTHON_LIBS := -L/usr/lib/python2.5 -lpython2.5
+PYTHONPATH	:=
+
+#================================================
+HAVE_HDF5	:= true
+
+#HDF5_DIR    := /home/dlab/pkgs/x86_64-fedora9-linux/stow/hdf5-1.8.1
+HDF5_DIR	:= /usr
+HDF5_LIBS       := -L$(HDF5_DIR)/lib -lhdf5_cpp -lhdf5
+HDF5_INCDIR	:= $(HDF5_DIR)/include
+
+#================================================
+#COIN_DIR	:= /home/dlab/pkgs/x86_64-fedora9-linux/stow/Coin-3.0.0
+COIN_DIR	:= /home/dlab/pkgs/$(YAM_TARGET)/stow/Coin-3.0.0
+COIN_INCDIR     := $(COIN_DIR)/include
+
+COIN_INC     :=  \
+                -I$(COIN_INCDIR) \
+                -DCOIN3D
+
+COIN_LIBS       := \
+                -L$(COIN_DIR)/lib \
+                -lCoin \
+                 -L/home/dlab/pkgs/$(YAM_TARGET)/stow/simage-1.6.1/lib -lsimage
+
+SOXT_CFLAGS = -I/home/dlab/pkgs/$(YAM_TARGET)/stow/SoXt-1.2.2-Coin-3.0.0/include \
+                -I/usr/lib64/glib-2.0/include \
+                -I/usr/lib64/gtk-2.0/include
+SOXT_LIBS = -L/home/dlab/pkgs/$(YAM_TARGET)/stow/SoXt-1.2.2-Coin-3.0.0/lib -lSoXt
+
+HAVE_SOGTK  := false
+
+HAVE_SOQT  := false
+QWT_INCLUDES      := -I/usr/lib/qt4/include/qwt
+QWT_LIBS          := -L/usr/lib -lqwt-qt4
+QT_LIBS     := -L/usr/lib64/qt-3.3/lib -lqt-mt
+SOQT_LIBS = -L/home/dlab/pkgs/$(YAM_TARGET)/stow/SoQt-1.4.1/lib -lSoQt $(QT_LIBS)
+
+#================================================
+#SWIG_PATH := /home/dlab/pkgs/$(YAM_TARGET)/stow/SWIG-1.3.38
+#SWIG_VERSION  := 1.3.38
+
+#SWIG_PYTHON_OPTS := -O -threads -keyword -nodefaultctor -nofastproxy -noproxyimport -w511
+#SWIG      := $(SWIG_PATH)/bin/swig
+#SWIG_PYTHON_INC   := $(SWIG_PYTHON_OPTS) -I$(SWIG_PATH)/share/swig/$(SWIG_VERSION)/python -I$(SWIG_PATH)/share/swig/$(SWIG_VERSION)
+
+
+#==========================================================
+#
+# Spice installation
+#
+CSPICE_DIR	:= /home/dlab/pkgs/src/spice/cspice-v62-64bit
+
+#==========================================================
+JPLV_INCS	:= -I/home/dlab/pkgs/x86_64-fedora9-linux/stow/jplv-1.2.1/include
+JPLV_LIBS	:= -L/home/dlab/pkgs/x86_64-fedora9-linux/stow/jplv-1.2.1/lib -ljplv
+
+#==========================================================
+GDAL_INCS	:= -I/usr/include/gdal
+GDAL_LIBS	:= -L/usr/lib -lgdal -lproj
+
+HAVE_MASL	:= false
+
+
+HAVE_COINSHADERS   := true

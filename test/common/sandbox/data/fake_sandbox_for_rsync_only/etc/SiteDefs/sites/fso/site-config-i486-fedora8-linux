@@ -1,0 +1,21 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+# include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-i486-fedora6-linux
+
+PYTHON_INCDIR := -I/usr/include/python2.5
+PYTHON_LIBS := -L/usr/lib/python2.5 -lpython2.5

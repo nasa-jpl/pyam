@@ -1,0 +1,49 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+# need to export the following since wtxtcl needs it
+export WIND_BASE        :=  /afs/jpl.nasa.gov/group/wind/t22_ppc
+
+# Do not set GCC_EXEC_PREFIX!!! It is causing problems with the
+# compiling of some of the C++ files in Dvalue and Darts++ modules
+# However, it appears to be needed for building the C files, and hence
+# we pass it in using the -B option
+INT_GCC_EXEC_PREFIX  :=  ${WIND_BASE}/host/${WIND_HOST_TYPE}/lib/gcc-lib/
+
+
+# needed so that wtxtcl can be found
+export PATH           := $(PATH):$(WIND_BIN)
+
+#==========================================================
+JPEG_INCDIR	:= -I/home/atbe/pkgs/sparc-sunos5.9/include
+
+#==========================================================
+# for TRAMEL
+HAVE_TRAMEL             := false
+
+#==========================================================
+# for RTI's Stethoscope
+export SCOPE_LIBS       =
+
+# export SCOPE_INCDIR     = -I${WIND_BASE}/rti/scopetools.4.0c/include/share -I${WIND_BASE}/rti/rtilib.4.2b/include/share
+
+export SCOPE_INCDIR = -I/home/atbe/pkgs/src/vxWorks/wind2.0_sim/rti/scopetools.2.0b/include/share  -I/home/atbe/pkgs/src/vxWorks/wind2.0_sim/rti/rtilib.4.0b/include/share
+
+#==========================================================
+# for RTI's NDDS
+HAVE_NDDS               := false
+export NDDS_LIBS        =

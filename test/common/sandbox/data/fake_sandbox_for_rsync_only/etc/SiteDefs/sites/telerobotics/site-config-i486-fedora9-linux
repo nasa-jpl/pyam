@@ -1,0 +1,141 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-i486-fedora8-linux
+HAVE_COIN := false
+
+COIN_DIR	:= /home/dlab/pkgs//$(YAM_TARGET)/stow/Coin-3.0.0
+COIN_INCDIR     := $(COIN_DIR)/include
+
+COIN_INC     :=  \
+                -I$(COIN_INCDIR) \
+                -DCOIN3D
+
+COIN_LIBS       := \
+                -L$(COIN_DIR)/lib \
+                -lCoin \
+                 -L/home/dlab/pkgs/$(YAM_TARGET)/stow/simage-1.6.1/lib -lsimage
+
+SOXT_CFLAGS = -I/home/dlab/pkgs/i486-fedora9-linux/stow/SoXt-1.2.2-Coin-3.0.0/include
+SOXT_LIBS = -L/home/dlab/pkgs/i486-fedora9-linux/stow/SoXt-1.2.2-Coin-3.0.0/lib -lSoXt
+
+HAVE_SOGTK  := false
+
+HAVE_SOQT  := false
+
+#================================================
+SWIG_PATH := /home/dlab/pkgs/$(YAM_TARGET)/stow/swig-1.3.40
+SWIG_VERSION  := 1.3.40
+
+SWIG_PYTHON_OPTS := -O -threads -keyword -nodefaultctor -nofastproxy -noproxyimport -w511
+# SWIG      := $(SWIG_PATH)/bin/swig
+SWIG :=
+SWIG_PYTHON_INC   := $(SWIG_PYTHON_OPTS) -I$(SWIG_PATH)/share/swig/$(SWIG_VERSION)/python -I$(SWIG_PATH)/share/swig/$(SWIG_VERSION)
+
+#================================================
+HAVE_HDF5	:= true
+#HDF5_DIR	:= /home/dlab/pkgs/i486-fedora9-linux/stow/hdf5-1.6.5
+HDF5_DIR	:= /usr
+HDF5_LIBS       := -L$(HDF5_DIR)/lib -lhdf5_cpp -lhdf5
+HDF5_INCDIR	:= $(HDF5_DIR)/include
+
+CORE_CFLAGS := -DDISABLE_STAT
+
+#==========================================================
+GDAL_INCS	:= -I/usr/include/gdal
+GDAL_LIBS	:= -L/usr/lib -lgdal -lproj
+
+#==========================================================
+GRAPHVIZ_INCDIR  := /home/dlab/pkgs/$(YAM_TARGET)/stow/graphviz-2.20.2/include
+GRAPHVIZ_LIBDIR  := /home/dlab/pkgs/$(YAM_TARGET)/stow/graphviz-2.20.2/lib
+
+#================================================
+HAVE_LCM := true
+LCM_INCS := -I/home/dlab/pkgs/${YAM_TARGET}/stow/lcm-trunk.2010.03.30/include
+LCM_LIBS := -L/home/dlab/pkgs/${YAM_TARGET}/stow/lcm-trunk.2010.03.30/lib -llcm
+
+#================================================
+LIBLBFGS_INCS	:= -I/home/dlab/pkgs/$(YAM_TARGET)/stow/liblbfgs-1.8/include
+LIBLBFGS_LIBS	:= -L/home/dlab/pkgs/$(YAM_TARGET)/stow/liblbfgs-1.8/lib -llbfgs
+
+
+#================================================
+HAVE_OGRE := true
+OGRE_DIR := /home/dlab/pkgs/$(YAM_TARGET)/stow/ogre-1.6.5
+OGRE_CFLAGS := -DOGRE_DOUBLE_PRECISION=1 -I$(OGRE_DIR)/include/OGRE
+OGRE_LIBS := -L$(OGRE_DIR)/lib -lOgreMain
+
+#================================================
+HAVE_OIS := true
+OIS_CFLAGS := -I/usr/include/OIS
+OIS_LIBS := -L/usr/lib -lOIS
+
+#================================================
+
+#HAVE_GTK := true
+#GTK_INCLUDES := -I/usr/include/gtk-2.0 -I/usr/lib/gtk-2.0/include \
+#		-I/usr/include/atk-1.0 -I/usr/include/cairo \
+#		-I/usr/include/pango-1.0 -I/usr/include/glib-2.0 \
+#		-I/usr/lib/glib-2.0/include -I/usr/include/pixman-1 \
+#		-I/usr/include/freetype2 -I/usr/include/libpng12
+#
+#GTK_LIBS := -lgtk-x11-2.0
+
+#================================================
+
+HAVE_GLADE := true
+GLADE_INCS := -I/usr/include/libglade-2.0
+GLADE_LIBS := -L/usr/lib -lglade-2.0
+
+#========+=================================================
+CVODE_INCS	:= -I/usr/include/cvodes -I/usr/include/sundials -I/usr/include/nvector
+CVODE_LIBS	:= -lsundials_cvodes -lsundials_nvecserial
+
+#================================================
+# This version of Boost is built with multithread support.
+HAVE_BOOST := true
+BOOST_DIR := /home/dlab/pkgs/${YAM_TARGET}/stow/boost_1_42_0-with_boostlog
+BOOST_INCS := -I$(BOOST_DIR)/include -pthread
+
+HAVE_BOOST_THREAD :=true
+BOOST_THREAD_LIBS := -L${BOOST_DIR}/lib -lboost_thread -pthread
+
+HAVE_BOOST_LOG := true
+BOOST_LOG_LIBS := -L${BOOST_DIR}/lib -lboost_log -lboost_filesystem -lboost_system ${BOOST_THREAD_LIBS}
+
+HAVE_BOOST_REGEX := true
+BOOST_REGEX_LIBS := -L${BOOST_DIR}/lib -lboost_regex
+
+
+#==========================================================
+HAVE_FBX := true
+FBX_INCS := -I/home/dlab/pkgs/$(YAM_TARGET)/stow/fbx-2011.3/include
+FBX_LIBS := -L/home/dlab/pkgs/$(YAM_TARGET)/stow/fbx-2011.3/lib -lfbxsdk_20113
+
+#===========================================================
+HAVE_CEGUI := true
+CEGUI_INCS := -I/home/dlab/pkgs/$(YAM_TARGET)/include/CEGUI
+CEGUI_LIBS := -L/home/dlab/pkgs/$(YAM_TARGET)/lib -lCEGUIBase \
+                                                  -lCEGUIOpenGLRenderer \
+                                                  -lCEGUIExpatParser \
+                                                  -lCEGUISampleHelper \
+                                                  -lCEGUIFalagardWRBase \
+                                                  -lCEGUITGAImageCodec \
+                                                  -lCEGUIFreeImageImageCodec \
+                                                  -lCEGUITinyXMLParser \
+                                                  -lCEGUILibxmlParser \
+                                                  -lCEGUIOgreRenderer

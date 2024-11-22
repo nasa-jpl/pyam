@@ -1,0 +1,58 @@
+# site specific stuff common to all site-config files
+
+#==========================================================
+RTIHOME = /home/atbe/pkgs/src/rti
+
+#==========================================================
+# load in generic flag settings
+include $(SITEDEFSHOME)/sites/shared.mk
+
+HAVE_SCOPE	= false
+HAVE_NDDS	= false
+
+#==========================================================
+# for TCL
+export TCL_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+export TCL_INCDIR	= -I/home/atbe/pkgs/include/tcl7.4
+export TCL_LIBS		= $(TCL_LIBDIR)/libtcl.a -lm
+
+# for TK
+export TK_LIBDIR	= $(TCL_LIBDIR)
+export TK_INCDIR	= $(TCL_INCDIR) -I/home/atbe/pkgs/include/tk4.0
+export TK_LIBS		= $(TK_LIBDIR)/libtk.a -L/usr/lib/X11R5 -lX11 $(TCL_LIBS)
+
+#==========================================================
+# for TRAMEL
+export TRAMEL_INCDIR	= -I$(YAM_ROOT)/include/Tramel
+export TRAMEL_LIBDIR	=
+export TRAMEL_LIBS	= -ltramel
+
+#==========================================================
+# for Mesa
+export MESA_INCDIR	= -I/home/atbe/pkgs/include
+export MESA_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+export MESA_LIBS	= -L$(MESA_LIBDIR) -lMesaGLU -lMesaGL
+
+#==========================================================
+# for RTI's Stethoscope
+export SCOPE_INCDIR	= -I$(STETHOSCOPEHOME)/include/$(RTI_OS) \
+				-I$(STETHOSCOPEHOME)/include/share
+export SCOPE_LIBS	= $(STETHOSCOPEHOME)/lib/$(RTI_TARGET)/libscope.a \
+			      $(RTILIBHOME)/lib/$(RTI_TARGET)/libutilsip.a
+
+#==========================================================
+# for RTI's NDDS
+export NDDS_INCDIR	= -I$(NDDSHOME)/include/$(RTI_OS) \
+				-I$(NDDSHOME)/include/share
+export NDDS_LIBS	= $(NDDSHOME)/lib/$(RTI_TARGET)/libndds.a \
+				$(RTILIBHOME)/lib/$(RTI_TARGET)/libutilsip.a
+
+#==========================================================
+# for Matlab
+export MATLAB		= /usr/local/matlab
+export MATLAB_INCDIR	= -I$(MATLAB)/extern/include
+export MATLAB_LIBS	= -L$(MATLAB)/extern/lib/hp700
+
+#==========================================================
+# for Perl
+export PERL		= /bin/perl

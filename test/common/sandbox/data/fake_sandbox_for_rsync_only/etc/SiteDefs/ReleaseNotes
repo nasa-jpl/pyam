@@ -1,0 +1,12 @@
+              Release Notes for "SiteDefs" module
+
+This file documents API, usage, portability etc. changes that have been
+introduced in new versions of the "SiteDefs" module. This
+information should be kept in mind when upgrading to newer versions of
+the module. This file may also documment major bug fixes in so far as
+they may impact upgrade decisions. More complete and detailed
+information on changes to the "SiteDefs" module can be found
+in the ChangeLog file.
+
+Release R1-79z (Fri Sep  2  9:45:42 2011):
+	Trying to get fornat working for Fedora 15.

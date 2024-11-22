@@ -1,0 +1,44 @@
+# This Makefile is used by YAM scripts to build and link a module.
+#
+# When invoked from the YAM scripts, this Makefile is passed values for
+# YAM_NATIVE, YAM_ROOT, YAM_SITE, and YAM_TARGET variables.
+
+CREATE_LINKS=true
+
+SITEDEFSHOME=$(shell pwd)
+export SITEDEFSHOME
+
+# Define YAM_ROOT if it is not already defined we need to do this because
+# overall.mk contains includes for other files using the full YAM_ROOT path.
+YAM_ROOT ?= $(CURDIR)/../..
+
+ifeq ($(wildcard $(YAM_ROOT)/etc/SiteDefs),$(YAM_ROOT)/etc/SiteDefs)
+  HAVE_SITEDEFS_LINK := true
+  include mkHome/shared/overall.mk
+endif
+
+SITELNK_DIR = $(RELLNK_DIR)
+ifeq ($(MODULE_TYPE),work)
+  SITELNK_DIR = $(RELLNK_DIR)
+endif
+
+mklinks-module::
+	@mkdir -p $(YAM_ROOT)/etc
+	@ln -sf $(SITELNK_DIR) $(YAM_ROOT)/etc/
+	@mkdir -p $(YAM_ROOT)/bin
+	@ln -sf $(SITELNK_DIR)/Drun $(YAM_ROOT)/bin/
+
+rmlinks-module::
+
+doxfiles::
+
+doxygen-docs:
+
+.DEFAULT:
+ifneq ($(HAVE_SITEDEFS_LINK),true)
+	@mkdir -p $(YAM_ROOT)/etc
+	@ln -sf $(SITEDEFSHOME) $(YAM_ROOT)/etc/
+	@mkdir -p $(YAM_ROOT)/bin
+	@ln -sf $(SITEDEFSHOME)/Drun $(YAM_ROOT)/bin/
+	@$(MAKE) --no-print-directory -f Makefile.yam $@
+endif

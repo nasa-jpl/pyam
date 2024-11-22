@@ -1,0 +1,213 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+#include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-i486-fedora3-linux
+
+
+
+#==========================================================
+#include $(SITEDEFSHOME)/site.common
+include $(SITEDEFSHOME)/sites/site.gcc
+
+CC		= /usr/bin/gcc
+CPLUSPLUS	= /usr/bin/gcc
+F77		= /usr/bin/g77
+LIBF77		= -lg2c
+LINKER_F77      := $(F77)
+
+#LIBSTDCPP = -L/home/atbe/pkgs/lib/i486-linux -lstdc++
+LIBSTDCPP	= -lstdc++
+export LIBSTDCPP
+
+#==========================================================
+# profiling options
+#_PROF			:= true
+ifeq ($(_PROF),true)
+  CC_COMPILE_FLAGS	+= -pg
+  CPLUSPLUS_COMPILE_FLAGS += -pg
+  CC_LINK_FLAGS		+= -pg
+  CPLUSPLUS_LINK_FLAGS  += -pg
+  BUILDING_SHARED_LIBS	:= false
+else
+  CC_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  F77_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  CPLUSPLUS_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+endif
+
+
+# are we building our own shared libraries?
+ifeq ($(BUILDING_SHARED_LIBS),)
+  BUILDING_SHARED_LIBS = true
+endif
+export BUILDING_SHARED_LIBS
+
+
+ifeq ($(BUILDING_SHARED_LIBS),true)
+  CC_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  CPLUSPLUS_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  export LD_SHARED
+  LD_SHARED = $(CC) -shared
+  export CC_EXTRA_SHLIB
+endif
+
+
+#==========================================================
+ifneq ($(USE_SHARED_LIBS),false)
+ export SHARED_LIBDIR = .
+ CC_LINK_FLAGS += -L$(SHARED_LIBDIR)
+ CPLUSPLUS_LINK_FLAGS += -L$(SHARED_LIBDIR)
+endif
+
+
+
+
+
+BUILD_STATIC_LIBS       := true
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+CC              = /usr/bin/gcc
+CPLUSPLUS       = /usr/bin/gcc
+F77             = /usr/bin/gfortran
+LINKER_F77      := $(F77)
+LIBF77          := -lgfortran
+LIBG2C          := /usr/lib/libg2c.so.0
+LIBSTDCPP       = -lstdc++
+
+HAVE_TCL	:= false
+
+#==========================================================
+# for Python
+export HAVE_PYTHON    := true
+PYTHONDIR             := /dsw/Python-2.5.1
+export PYTHON_INCDIR  := -I$(PYTHONDIR)/include/python2.5
+export PYTHON_LIBS    := -L$(PYTHONDIR)/lib -lpython2.5 /tps/depot/expat-2.0.0_32/lib/libexpat.a -lreadline -lgdbm -lncurses -lpanel -L/tps/lib -lBLT -ltix -ltk -ltcl
+export PYTHON_BIN     := /tps/bin/python
+
+# -lpthread -ldl -lutil
+
+# for Python static library
+# PYTHON_LIBS    += -L/usr/lib/python2.4/config
+
+ifeq ($(PYTHONPATH),)
+#  PYTHONPATH	:= /home/atbe/pkgs/src/Python/installs/i486-fedora4-linux/2.4.1/lib/python
+else
+#  PYTHONPATH	:= $(PYTHONPATH):/home/atbe/pkgs/src/Python/installs/i486-fedora4-linux/2.4.1/lib/python
+endif
+PYTHONPATH	:= /home/jain/TPS/Python
+export PYTHONPATH
+
+#==========================================================
+
+GTK_INCLUDES := -I/usr/include/gtk-2.0 -I/usr/include/cairo \
+                       -I/usr/include/glib-2.0 -I/usr/include/pango-1.0 \
+                       -I/usr/lib/glib-2.0/include -I/usr/lib/gtk-2.0/include \
+                       -I/usr/include/atk-1.0
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+HAVE_IV		:= false
+HAVE_COIN       := true
+
+HAVE_SOXT = true
+SOXT_CFLAGS = -I/dsw/SoXt-1.2.2/include
+SOXT_LIBS = -L/dsw/SoXt-1.2.2/lib -lSoXt
+XT_LIBS   := -lXmu -lXt -lXi -lXpm -lXp
+
+HAVE_SOQT := false
+SOQT_CFLAGS = -I/home/atbe/pkgs/$(YAM_TARGET)/stow/SoQt-1.4.1/include \
+              -I/usr/lib/qt-3.3/include
+SOQT_LIBS = -L/home/atbe/pkgs/$(YAM_TARGET)/stow/SoQt-1.4.1/lib -lSoQt
+QT_LIBS	    := -L/usr/lib/qt-3.3/lib -lqt-mt
+
+HAVE_COINSHADERS := true
+
+#==========================================================
+#COIN_DIR     := /home/dlab/pkgs/$(YAM_TARGET)/stow/Coin-2.5
+
+COIN_DIR     := /dsw/Coin-3.0.0
+COIN_INC     :=  \
+                -I$(COIN_DIR)/include \
+                -D_REENTRANT -DCOIN3D
+
+COIN_LIBS       := \
+                   -L$(COIN_DIR)/lib -lCoin  \
+                   -L/dsw/simage-1.6.1/lib  -lsimage
+
+#==========================================================
+export GL_LIBS          = -L/usr/X11R6/lib -lGLU -Wl,-Bdynamic -lGL
+
+MOTIF_LIBS	 :=  -L/usr/X11R6/lib  -lXm
+
+#==========================================================
+# disable the Dshell audit compilation flags
+ENABLE_AUDIT_CODE    := false
+
+export LIBXML2_LIBS = -L/usr/lib -lxml2
+
+#==========================================================
+# enable MASL builds
+HAVE_MASL = true
+MASL_LIBS       := /afs/jpl.nasa.gov/group/mas/programs/MASLlibs/linux/MASLlibs.current/dp-spice.a /afs/jpl.nasa.gov/group/mas/programs/MASLlibs/linux/MASLlibs.current/dp-vector.a
+
+#===========================================================
+
+JPLV_INCS	:= -I/home/jain/TPS/jplvinstall/include
+JPLV_LIBS	:= -L/home/jain/TPS/jplvinstall/lib -ljplv
+
+CSPICE_DIR	:= /home/jain/TPS/cspice-v62
+
+HAVE_HDF5 := true
+HDF5_INCDIR  := /dsw/hdf5-1.6.5/include
+HDF5_LIBS    := -L/dsw/hdf5-1.6.5/lib -lhdf5_cpp -lhdf5
+
+
+#=========================================================
+# Library to read/write PNG files
+export PNG_LIBDIR = /usr/lib
+export PNG_INCDIR = /usr/include
+export PNG_LIBS   = -L$(PNG_LIBDIR) -lpng
+
+JPEG_LIBS	  := -L/usr/lib -ljpeg
+PGM_LIBS	  := -L/usr/lib -lnetpbm
+TIFF_LIBS	  := -L/usr/lib -ltiff
+GIF_LIBS	  := -L/usr/lib -lgif
+BZ2_LIBS	  := -L/usr/lib -lbz2
+FREETYPE_LIBS	  := -L/usr/lib -lfreetype
+GTK_LIBS	  := -L/usr/lib -lgtk-x11-2.0
+
+
+#==============================================================
+HAVE_AVSIM	= true
+AVSIM_DIR	:= /home/mdicicco/roams/mdicicco-SurfaceSim2
+
+#==============================================================
+LIBXML2_DIR := /dsw/libxml2-2.6.16
+LIBXML2_CFLAGS := -I$(LIBXML2_DIR)/include/libxml2
+LIBXML2_LIBS    := -I$(LIBXML2_DIR)/lib -lxml2
+
+
+# needed for RoverNavModels
+BOOST_INCS := -I/dsw/boost_1_35_0/include/boost-1_35
+
+#==========================================================
+# for SWIG
+SWIG_PATH := /dsw/swig-1.3.35
+SWIG_VERSION  := 1.3.35
+SWIG      := $(SWIG_PATH)/bin/swig
+
+SWIG_PYTHON_OPTS := -O -threads -keyword -nodefaultctor \
+                         -nofastproxy -noproxyimport
+
+SWIG_PYTHON_INC   := $(SWIG_PYTHON_OPTS) \
+                        -I$(SWIG_PATH)/share/swig/$(SWIG_VERSION)/python \
+                        -I$(SWIG_PATH)/share/swig/$(SWIG_VERSION)

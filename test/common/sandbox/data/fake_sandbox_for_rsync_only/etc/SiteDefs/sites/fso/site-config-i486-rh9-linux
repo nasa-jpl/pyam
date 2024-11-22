@@ -1,0 +1,150 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+
+#==========================================================
+#include $(SITEDEFSHOME)/site.common
+include $(SITEDEFSHOME)/sites/site.gcc
+
+CC		= /usr/bin/gcc
+CPLUSPLUS	= /usr/bin/gcc
+F77		= /usr/bin/g77
+LIBF77		= -lg2c
+LINKER_F77      := $(F77)
+
+#LIBSTDCPP = -L/home/atbe/pkgs/lib/i486-linux -lstdc++
+LIBSTDCPP	= -lstdc++
+export LIBSTDCPP
+
+#==========================================================
+# profiling options
+#_PROF			:= true
+ifeq ($(_PROF),true)
+  CC_COMPILE_FLAGS	+= -pg
+  CPLUSPLUS_COMPILE_FLAGS += -pg
+  CC_LINK_FLAGS		+= -pg
+  CPLUSPLUS_LINK_FLAGS  += -pg
+  BUILDING_SHARED_LIBS	:= false
+else
+  CC_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  F77_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  CPLUSPLUS_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+endif
+
+
+# are we building our own shared libraries?
+ifeq ($(BUILDING_SHARED_LIBS),)
+  BUILDING_SHARED_LIBS = true
+endif
+export BUILDING_SHARED_LIBS
+
+
+ifeq ($(BUILDING_SHARED_LIBS),true)
+  CC_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  CPLUSPLUS_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  export LD_SHARED
+  LD_SHARED = $(CC) -shared
+  export CC_EXTRA_SHLIB
+endif
+
+
+#==========================================================
+ifneq ($(USE_SHARED_LIBS),false)
+ export SHARED_LIBDIR = .
+ CC_LINK_FLAGS += -L$(SHARED_LIBDIR)
+ CPLUSPLUS_LINK_FLAGS += -L$(SHARED_LIBDIR)
+endif
+
+
+#==========================================================
+# for Python
+export HAVE_PYTHON	:= true
+PYTHONDIR		:= /usr
+export PYTHON_INCDIR	:= -I$(PYTHONDIR)/include/python2.3
+export PYTHON_LIBS	:= -L$(PYTHONDIR)/lib -lpython2.3
+
+#==========================================================
+# for X11
+export X11_INCDIR       := -I/usr/X11R6/include
+export X11_LIBDIR       := /usr/X11R6/lib
+
+#==========================================================
+HAVE_IV		:= false
+HAVE_COIN	:= true
+COIN_INC     :=  \
+                -I/home/atbe/pkgs/${YAM_TARGET}/stow/SoXt-1.2.2/include \
+                -I/home/atbe/pkgs/${YAM_TARGET}/stow/Coin-2.4.1/include \
+                -D_REENTRANT -DCOIN3D
+
+COIN_LIBS       := \
+                -L/home/atbe/pkgs/${YAM_TARGET}/stow/SoXt-1.2.2/lib \
+                -L/home/atbe/pkgs/${YAM_TARGET}/stow/Coin-2.4.1/lib \
+                -lCoin -lSoXt $(GL_LIBS)
+
+export GL_LIBS          = -lGL -lGLU
+
+#==========================================================
+  # for TCL
+  TCLDIR		:= /usr
+  TCLSH			:= $(TCLDIR)/bin/tclsh8.4
+  export HAVE_TCL	:= true
+  export TCL_LIBDIR	:= $(TCLDIR)/lib
+  export TCL_INCDIR	:= -I$(TCLDIR)/include -DUSE_NON_CONST
+  export TCL_LIBS	:= -L$(TCLDIR)/lib -ltcl8.4 -ldl -lm
+
+  # for TK
+  TKDIR			:= /usr
+  export HAVE_TK	:= true
+  export TK_LIBDIR	:= $(TKDIR)/lib
+  export TK_INCDIR	:= $(TCL_INCDIR) -I$(TKDIR)/include
+  export TK_LIBS	:= -L$(TKDIR)/lib -ltk8.4 -L$(X11_LIBDIR) -lX11 $(TCL_LIBS)
+
+
+#==========================================================
+# for libxml2 (XML parser library - settings obtained from `xml2-config --cflags` & `xml2-config --libs` )
+export LIBXML2_CFLAGS = -I/usr/include/libxml2
+export LIBXML2_LIBS = -L/usr/lib -lxml2
+
+#==========================================================
+ELMER                   := /home/atbe/pkgs/i486-fedora3-linux/bin/elmer
+ELMER_INCDIR            := -I/home/atbe/pkgs/src/elmer/elmer1.1.5/elmer
+ELMER_LIBS              := -L/home/atbe/pkgs/src/elmer/elmer1.1.5/elmer -lelmer
+
+#==========================================================
+# needed by graphviz and doxygen
+#export DOTFONTPATH   = /home/atbe/pkgs/src/webfonts
+GRAPHVIZ_LIBDIR = /usr/lib/graphviz
+# parent directory of "graphviz/*.h" subdirectory
+GRAPHVIZ_INCDIR = /usr/include
+
+#==========================================================
+# Library to read/write PGM files
+export PGM_LIBDIR = /usr/lib
+export PGM_INCDIR = /usr/include
+export PGM_LIBS   = -L$(PGM_LIBDIR) -lnetpbm
+
+#==========================================================
+# Doxygen flags
+export HAVE_DOXYGEN = true
+export DOXYGEN	    = /usr/bin/doxygen -d Validate
+#==========================================================
+# for SWIG
+##SWIG	:= /home/atbe/pkgs/i486-rh9-linux/stow/SWIG-1.3.25/bin/swig
+
+#==========================================================
+HAVE_MASL	:= true
+
+#==========================================================
+JPEG_LIBS      := -ljpeg

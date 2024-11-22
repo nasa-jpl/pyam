@@ -1,0 +1,4 @@
+should_fail.py
+ERROR: Option "--badOptionName" at should_fail.py:1 should be spelled with only lowercase letters
+ERROR: Option "--anotherBadOptionName" at should_fail.py:3 should be spelled with only lowercase letters
+ERROR: "spelllling" in option "--bad-spelllling" is misspelled at should_fail.py:4

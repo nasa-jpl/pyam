@@ -1,0 +1,63 @@
+#
+# Makefile.yam
+#
+# This Makefile is used by YAM scripts to build and link a module.
+# It should have targets for:
+#     yam-mklinks links depends libs bins clean
+# even if some are no-ops.
+#
+# When invoked from the YAM scripts, this Makefile is passed values for
+# YAM_NATIVE, YAM_ROOT, YAM_SITE, and YAM_TARGET variables.
+#
+# Use etc/SiteDefs/Makefile.yam-common to take advantage of some common
+# functionality.
+#
+#export LOCAL_DIR = $(shell pwd | sed -e 's@/tmp_mnt@@' -e 's@/export@@')
+#
+
+CRLINKS=true
+
+SITEDEFSHOME=$(shell pwd)
+export SITEDEFSHOME
+
+# define YAM_ROOT if it is not already defined
+# we need to do this because overall.mk contains includes for
+#   other files using the full YAM_ROOT path
+YAM_ROOT ?= $(CURDIR)/../..
+
+ifeq ($(wildcard $(YAM_ROOT)/etc/SiteDefs),$(YAM_ROOT)/etc/SiteDefs)
+  HAVE_SITEDEFS_LINK := true
+  include mkHome/shared/overall.mk
+endif
+
+
+#====================================================
+SITELNK_DIR = $(RELLNK_DIR)
+ifeq ($(MODULE_TYPE),work)
+  SITELNK_DIR = $(RELLNK_DIR)
+endif
+
+
+mklinks-module::
+	@if (test -h $(YAM_ROOT)/etc/SiteDefs) then :;  \
+           else \
+             echo "   linking SiteDefs into ./etc ..."; \
+                    ln -s $(SITELNK_DIR) $(YAM_ROOT)/etc/SiteDefs; \
+        fi;
+
+rmlinks-module::
+#	rm -f $(YAM_ROOT)/etc/SiteDefs
+
+doxfiles::
+
+doxygen-docs:
+
+
+.DEFAULT:
+     ifneq ($(HAVE_SITEDEFS_LINK),true)
+	@echo "   linking SiteDefs into ./etc ..."; \
+                    ln -s $(SITEDEFSHOME) $(YAM_ROOT)/etc/SiteDefs; \
+	 $(MAKE) --no-print-directory -f Makefile.yam $@
+     endif
+
+#$(if $(HAVE_SITEDEFS_LINK),,mklinks-module)

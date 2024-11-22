@@ -1,0 +1,91 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+# are we building our own shared libraries?
+ifeq ($(BUILDING_SHARED_LIBS),)
+  BUILDING_SHARED_LIBS = true
+endif
+export BUILDING_SHARED_LIBS
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+
+IVDIR	= c:\\OpenInventor\\inventor\\install
+TIXDIR	= c:\\tix
+CYGDIR	= c:\\cygwin
+TCLDIR	= c:\\tcl
+X11DIR	= $(TCLDIR)\\include\\X11
+QTDIR	= c:\\qt
+
+IVINC	= $(IVDIR)\\include
+TCLINC	= $(TCLDIR)\\include
+TIXINC	= $(TIXDIR)\\generic
+X11INC	= $(X11DIR)
+QTINC	= $(QTDIR)\\include
+
+CC_OPTIMIZATION	= #/O2
+CC_INCLUDES	= /I . /I .\\include /I ..\\..\\include /I $(X11INC) /I $(TCLINC) /I $(TIXINC)
+CC_DEFINES	= /D "WIN32" /D "_DEBUG"
+# /D "_MBCS" /D "IV_STRICT" /D "QT_DLL"
+CC_WARNINGS	= /W3
+
+CC_OUTPUT_OPT		:= /Fo
+LINK_OUTPUT_OPT		:= /OUT:
+LINK_LIBPATH_OPT	:= /LIBPATH:
+CC_COMPILEONLY_OPT	:= /c
+AR_OUTPUT_OPT		:= /OUT:
+
+VCFLAGS		= /nologo /MDd /Gm /GX /GR /ZI /FD /GZ
+
+export CC_COMPILE_FLAGS	= $(CC_OPTIMIZATION) \
+		$(CC_DEFINES) $(CC_WARNINGS) $(CC_INCLUDES)
+
+export CC_LIBS := wsock32.lib
+#PROJLIB := $(shell cygpath -w $(YAM_ROOT)/lib/$(YAM_TARGET) )
+PROJLIB := ..\\..\\lib\\$(YAM_TARGET)
+export CC_LINK_FLAGS	:=  /LIBPATH:$(TCLDIR)\\lib /LIBPATH:$(PROJLIB)
+
+CPLUSPLUS_OPTIMIZATION 		:= $(CC_OPTIMIZATION)
+export CPLUSPLUS_INCLUDES	:= $(CC_INCLUDES)
+export CPLUSPLUS_DEFINES 	:= $(CC_DEFINES)
+CPLUSPLUS_WARNINGS		:= $(CC_WARNINGS)
+
+export CPLUSPLUS_COMPILE_FLAGS 	:= $(CPLUSPLUS_OPTIMIZATION) \
+		$(CPLUSPLUS_DEFINES) $(CPLUSPLUS_WARNINGS) $(CPLUSPLUS_INCLUDES)
+
+export CPLUSPLUS_LIBS 	:= $(CC_LIBS)
+export CPLUSPLUS_LINK_FLAGS    := $(CC_LINK_FLAGS)
+
+export CC              	:= cl $(VCFLAGS) /TC
+export CPLUSPLUS       	:= cl $(VCFLAGS) /TP
+
+export AR 		:= lib
+export AR_FLAGS 	:= /SUBSYSTEM:WINDOWS
+export RANLIB 		:= false
+# The linker: /SUBSYSTEM:WINDOWS make a "GUI" app, but requires the app to have a WinMain()
+export LD 		:= link /SUBSYSTEM:WINDOWS /DEBUG
+export LD_SHARED 	:= link /DLL /SUBSYSTEM:WINDOWS /DEBUG
+export LINKER 		:= link /SUBSYSTEM:WINDOWS /DEBUG
+# The linker: /SUBSYSTEM:CONSOLE make a "command line" app, requires the app to have a standard "main()"
+export LINKER_CONSOLE	:= link /SUBSYSTEM:CONSOLE /DEBUG
+
+TCL_LIBS	:= tcl83.lib
+TK_LIBS		:= $(TCL_LIBS) tk83.lib
+TIX_LIBS	:= $(TK_LIBS) tix8183.lib
+IV_LIBS 	:= /LIBPATH:$(IVDIR)\\lib soqt.lib inventor.lib
+QT_LIBS		:= /LIBPATH:$(QTDIR)\\lib qt-mt230nc.lib
+GL_LIBS		:= opengl32.lib
+
+export HAVE_TRAMEL=false
+export HAVE_IV=true

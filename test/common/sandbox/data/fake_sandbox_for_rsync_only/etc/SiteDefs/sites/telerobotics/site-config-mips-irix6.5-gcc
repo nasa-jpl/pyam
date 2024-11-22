@@ -1,0 +1,15 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+# use the Irix 6.5 settings except with GCC
+USE_GCC295	      = true
+export HAVE_IV = false
+
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-mips-irix6.5

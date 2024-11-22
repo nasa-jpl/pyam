@@ -1,0 +1,9 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+#==========================================================
+#include $(SITEDEFSHOME)/site.common
+include $(SITEDEFSHOME)/sites/site.gcc

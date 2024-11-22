@@ -1,0 +1,218 @@
+#!/usr/bin/env python
+
+"""
+Format and release a modules.
+"""
+
+import argparse
+import os
+#import subprocess
+import sys
+
+yam_root = os.popen('yamroot').read().strip()
+
+assert os.path.exists(yam_root)
+
+
+def formatModule(module):
+    """
+    Do various checks and make a formatting release of a module if it
+    needs one.
+    """
+
+    print("=============== Making FORMATTING release for %s module" % module)
+    path = os.path.join(yam_root, 'src', module)
+    if not os.path.exists(path):
+        print('ERROR: The %s folder does not exist  - ABORTING' % path)
+        return
+
+
+    #--------------------------------
+    # check if module is up to date
+
+    # run svn status ????
+    if 0:
+        result = os.popen('svn status -q %s' % path).read()
+
+        assert not result
+
+    #--------------------------------
+    # check if there are any umcommitted changes
+
+    # for now revert any uncommitted changes in the module (some may be
+    # there from a previous make docs run)
+    print("Reverting local changes in %s" % path)
+    os.system('svn revert -R %s || git -C %s restore .' % (path, path) )
+
+    # run svn status
+    #result = os.popen('svn status -q %s' % path).read().strip()
+    result = os.popen('vcs status -q -s %s' % path).read().strip()
+    #breakpoint()
+
+    print('RES status=<', result, '>')
+    if result:
+        print('ERROR: Found uncommitted files in the %s module - ABORTING' % module)
+        return
+    else:
+        print('    Did not find uncommitted files in the %s module' % module)
+    #--------------------------------
+    # check if there are any committed changes
+
+    # run pyam diff
+    result = os.popen('pyam --no-log diff %s | grep -v "getting diff"' % module).read()
+    # result = os.popen('pyam --no-log diff %s' % module).read()
+
+    #print('RES diff=', result)
+    if result:
+        print('ERROR: Found unreleased commits in the %s module - ABORTING' % module)
+        return
+    else:
+        print('    Did not find unreleased  ommitted file in the %s module' % module)
+
+
+    #--------------------------------
+    # check if on latest branch or the main trunk
+
+    # run svn info
+    result = os.popen('svn info --show-item relative-url %s || git -P -C %s branch' % (path, path)).read().strip()
+
+    if result[0] == '*':
+        repo_type = 'git'
+        # this is a git module on the main trunk
+        print("Result from git branch checking", result)
+        if result ==  '* main':
+            # the module is on the main trunk
+            pass
+        else:
+            # for now insist on things being on the main trunk
+            print('ERROR: the %s (git) module is not on the main trunk - ABORTiNG' % module)
+            return
+
+#             latest_rel = os.popen('pyam --no-log latest %s' % module).read().split()[0]
+#             print('LATEST=', latest_rel)
+#             assert latest_rel in branch
+
+
+    else:
+        # this is a svn module
+        branch = os.path.basename(result)
+        # check if on main trunk or latest branch
+        repo_type = 'svn'
+        print('    BRANCH=<', branch, '>')
+        if branch != 'trunk':
+            print("svn branch check", result)
+            # for now insist on things being on the main trunk
+            print('ERROR: the %s (svn) module is not on the main trunk - ABORTiNG' % module)
+            return
+
+#             latest_rel = os.popen('pyam --no-log latest %s' % module).read().split()[0]
+#             print('LATEST=', latest_rel)
+#             assert latest_rel in branch
+
+
+    #print('    RES branch=', result)
+    #assert not result
+    print("Repo type=", repo_type)
+    #--------------------------------
+    # run 'make format'
+
+    result = os.popen('make format -C %s' % path).read()
+
+    # check if any files have changed - and return if nothing has changed
+    # run svn status
+    #result = os.popen('svn status -q %s' % path).read()
+    result = os.popen('vcs status -q -s %s' % path).read().strip()
+
+    print('RES fstat=', result)
+    if not result:
+        print('Nothig to do for the %s module - it is already formatted' % module)
+        return
+
+    print('Needs formatting - continuing with release')
+    #--------------------------------
+    # run 'make all'
+
+    print('Building the %s module ...' % module)
+    result = os.system('make -j 20 all -C %s' % path)
+    print('Done building the %s module ...' % module)
+
+    #--------------------------------
+    # run 'make docs'
+
+    print('Building docs for the %s module ...' % module)
+    # leave the read() at the end to force this command to complete before moving on
+    result = os.popen('make docs -C %s' % path).read()
+    print('Done building docs for the %s module ...' % module)
+
+
+    #--------------------------------
+    # commit changes
+
+    if repo_type == 'svn':
+        os.system('svn commit -m "FORMATTED" %s' % path)
+    else:
+        os.system('git -C %s commit -m "FORMATTED" .'  % path)
+        os.system('git -C %s push'  % path)
+
+    #--------------------------------
+    # run pyam save
+
+    print('Released the formatted  %s module ...' % module)
+    os.system('pyam --non-interactive save --no-check-link-modules --email-tag "FORMATTED" %s' % module)
+    print('Done releasing the formatted  %s module ...' % module)
+
+
+parser = argparse.ArgumentParser(
+    description=__doc__,
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+parser.add_argument('--quiet', action='store_true',
+                    help='do not print progress messages')
+
+parser.add_argument(
+    '--modules', nargs='*',
+    help='modules to build; '
+    'none are specified')
+
+from yam import file_system_utils
+try:
+    tmp_root_directory = file_system_utils.find_sandbox_root(os.getcwd())
+except:
+    tmp_root_directory = " "
+
+def pyam(arguments, sandbox_path,
+         quiet=True, stdout=None, stderr=None, timeout=None, nolog=False):
+    """Run pyam command-line utility."""
+    print('Running pyam with arguments:', arguments)
+    process = subprocess.Popen(
+        (['timeout', str(timeout)] if timeout else []) +
+        [pyam_path(), '--non-interactive'] +
+        (['--quiet'] if quiet else []) +
+        (['--no-log'] if nolog else []) +
+        (['--sandbox-root-directory=' + sandbox_path]
+         if sandbox_path else []) +
+        arguments,
+        stdout=stdout,
+        stderr=stderr)
+
+    output = process.communicate()[0]
+
+    if timeout and process.returncode == 124:
+        print('Timed out', file=sys.stderr)
+    elif process.returncode != 0:
+        raise PyamException()
+
+    return output.decode('utf-8') if output else output
+
+
+args = parser.parse_args()
+
+modules = args.modules
+# do all the work modules if none have been specified
+if not modules:
+    modules = os.popen('make -C %s myvars MYVARS=WORK_MODULES' % yam_root).read().split()
+
+# make formatting releases for the modules
+#print('LLLL',  len(modules))
+for m in modules:
+    formatModule(m)

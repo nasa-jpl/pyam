@@ -1,0 +1,182 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+#==========================================================
+#include $(SITEDEFSHOME)/site.common
+include $(SITEDEFSHOME)/sites/site.gcc
+
+CC		= /usr/bin/gcc
+CPLUSPLUS	= /usr/bin/gcc
+F77		= /usr/bin/g77
+LIBF77		= -lg2c
+
+#LIBSTDCPP = -L/home/atbe/pkgs/lib/i486-linux -lstdc++
+LIBSTDCPP	= -lstdc++
+#==========================================================
+# are we building our own shared libraries?
+ifeq ($(BUILDING_SHARED_LIBS),)
+  BUILDING_SHARED_LIBS = true
+endif
+export BUILDING_SHARED_LIBS
+
+ifeq ($(BUILDING_SHARED_LIBS),true)
+  CC_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  CPLUSPLUS_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  GCC_EXEC_PREFIX = /usr/lib/gcc-lib/i686-pc-cygwin/2.95.3-5
+#  LD_SHARED = $(LD) -G -L$(YAM_ROOT)/lib/$(YAM_NATIVE)-shared -L$(YAM_ROOT)/lib/$(YAM_NATIVE) -L$(GCC_EXEC_PREFIX)
+  LD_SHARED = $(LD) -L$(YAM_ROOT)/lib/$(YAM_NATIVE) -L$(GCC_EXEC_PREFIX)
+  export LD_SHARED
+  CC_EXTRA_SHLIB = -lgcc
+  export CC_EXTRA_SHLIB
+endif
+
+#==========================================================
+ifneq ($(USE_SHARED_LIBS),false)
+# SHARED_LIBDIR = /usr/lib
+ export SHARED_LIBDIR = .
+# CC_LINK_FLAGS += -L$(SHARED_LIBDIR) -Xlinker -rpath-link -Xlinker $(YAM_ROOT)/lib/$(YAM_NATIVE)
+ CC_LINK_FLAGS += -L$(SHARED_LIBDIR)
+# CPLUSPLUS_LINK_FLAGS += -L$(SHARED_LIBDIR) -Xlinker -rpath-link -Xlinker $(YAM_ROOT)/lib/$(YAM_NATIVE)
+ CPLUSPLUS_LINK_FLAGS += -L$(SHARED_LIBDIR)
+endif
+
+
+#==========================================================
+# for X11
+export X11_INCDIR       = -I/usr/X11R6/include
+export X11_LIBDIR       = /usr/X11R6/lib
+
+#==========================================================
+# for Tcl/Tk/Tix
+  # for TCL
+  TCLSH			:= /usr/local/tcl8.3/bin/tclsh83
+  export HAVE_TCL	= false
+#  export TCL_LIBDIR	= /usr/lib
+  export TCL_LIBDIR	= /usr/local/tcl8.3/lib
+#  export TCL_INCDIR	= -I/usr/include
+  export TCL_INCDIR	= -I/usr/local/tcl8.3/include
+#  export TCL_LIBS	= -ltcl80 -lcygwin -lm
+  export TCL_LIBS	= -L/usr/local/tcl8.3/lib -ltcl83 -lcygwin -lm
+
+  # for TK
+  export HAVE_TK		= true
+  export TK_LIBDIR	= $(TCL_LIBDIR)
+  export TK_INCDIR	= $(X11_INCDIR) $(TCL_INCDIR)
+#  export TK_LIBS	= -ltk80 -L$(X11_LIBDIR) -lX11 $(TCL_LIBS)
+  export TK_LIBS	= -ltk83 -L$(X11_LIBDIR) -lX11 $(TCL_LIBS)
+
+  # for TIX
+  export HAVE_TIX       = true
+  export TIX_INCDIR     = $(X11_INCDIR) $(TK_INCDIR)
+#  export TIX_LIBDIR	=
+  export TIX_LIBS       =  -ltix8183 $(TK_LIBS)
+
+#==========================================================
+# for OpenInventor
+export HAVE_IV		= true
+#IV_VERSION		= 2.1.5-7
+#export IV_INCDIR	= /home/atbe/pkgs/include/Inventor-$(IV_VERSION)
+# -I/usr/local/inventor/include/Inventor
+export IV_INCDIR	= /usr/local/Qt2.3.0/include -I/usr/local/inventor/include $(X11_INCDIR)
+export IV_CFLAGS	= -mwin32
+
+#IV_LIB_DIR		= /home/atbe/pkgs/lib/$(YAM_TARGET)
+IV_LIB_DIR		= /usr/local/inventor/lib
+#export IV_LIB		= -L$(IV_LIB_DIR) -lInventor-$(IV_VERSION)
+#export IV_XT_LIB	= -lInventorXt-$(IV_VERSION)
+#export IV_FL_LIB	= -lFL-$(IV_VERSION)
+#export IV_IMG_LIB	= -limage-$(IV_VERSION)
+export IV_LIB		= -L$(IV_LIB_DIR) -linventor -lsoqt -mwindows
+#export IV_XT_LIB	= -lInventorXt
+export IV_FL_LIB	=
+export IV_IMG_LIB	=
+export JPEG_LIBS	= -ljpeg
+
+#export GL_LIBS		= -lGL -lGLU
+
+export IV_LIBS		= $(IV_XT_LIB) $(IV_LIB) $(IV_FL_LIB) \
+			  $(IV_IMG_LIB) $(JPEG_LIBS) $(GL_LIBS)
+
+#==========================================================
+HAVE_SCOPE	:=
+HAVE_TRAMEL	:=
+
+HAVE_HDF5 := true
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+#include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+#include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-x86_64-rhel4-linux
+
+#================================================
+# CPLUSPLUS_COMPILE_FLAGS	  += -I/usr/lib64
+
+F77             := /usr/bin/gcc
+LINKER_F77             := /usr/bin/gcc -L/usr/lib64 -lgfortran
+
+#================================================
+HAVE_PYTHON := true
+PYTHONDIR             := /usr
+PYTHON_BIN            := /usr/bin/python
+PYTHON_INCDIR := -I$(PYTHONDIR)/include/python2.5
+PYTHON_LIBS := -L$(PYTHONDIR)/bin -lpython2.5
+PYTHONPATH	:=
+
+#================================================
+HAVE_HDF5	:= true
+HDF5_DIR	:= /usr/hdf5-cygwin
+HDF5_LIBS       := -L$(HDF5_DIR)/lib -lhdf5_cpp -lhdf5 -lz
+HDF5_INCDIR	:= $(HDF5_DIR)/include
+
+LIBLBFGS_INCS		:= -I/usr/include
+LIBLBFGS_LIBS		:= -I/usr/libs -llbfgs
+
+HAVE_SWIG := false
+SWIG :=
+
+BOOST_INCS  := -I/usr/include/boost
+
+JPLV_INCS  := -I/usr/include
+JPLV_LIBS  := -L/usr/lib -ljplv
+CSPICE_DIR := /lib
+
+HAVE_LCM := true
+LCM_LIBS := -llcm -lglib-2.0 -lgthread-2.0
+
+PGM_INCDIR := /usr/include/netpbm
+
+#================================================
+SOA_LIBS := -lSOA -lMathc90Linalg
+DVAR_LIBS := -lDvar $(HDF5_LIBS) $(SOA_LIBS) -lDerrorHandler -lYAClasses
+DARTS_LIBS := -lDartsBase -Ndarts $(LIBLBFGS_LIBS) -lOldMath -lIKGraph
+CORE_LIBS := -lHDF5Store -lCORE -lDvarHDF5Store -lCORE $(DVAR_LIBS)
+SPICE_LIBS := -lSpice /lib/cspice.a /lib/csupport.a
+SIM_SCAPE_LIBS := -lSimScape $(CORE_LIBS) $(SPICE_LIBS) -ljpeg
+SIM_SCAPE_BASIC_LIBS := -lSimScapeBasic $(SIM_SCAPE_LIBS)

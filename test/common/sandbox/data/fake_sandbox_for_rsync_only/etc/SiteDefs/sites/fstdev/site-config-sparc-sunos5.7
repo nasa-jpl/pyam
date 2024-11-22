@@ -1,0 +1,141 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+HAVE_TAOCORBA	= true
+
+#==========================================================
+#include $(SITEDEFSHOME)/site.common
+include $(SITEDEFSHOME)/sites/site.gcc
+
+LIBGCC = -L/home/atbe/pkgs/lib/gcc-lib/sparc-sun-solaris2.7/2.95.2 -lgcc
+export LIBGCC
+LIBSTDCPP = -L/home/atbe/pkgs/lib/gcc-lib/sparc-sun-solaris2.7/2.95.2 -lstdc++
+export LIBSTDCPP
+
+# This flag is needed for dealing with screwed up X11 header files that
+# gcc 2.95 will choke on
+FPERMISSIVE_OPT = -fpermissive
+
+CC = /home/atbe/pkgs/bin/sparc-sunos5.7/gcc-2.95.2
+CPLUSPLUS := $(CC)
+
+# Having trouble with the Gnu 'ar'
+AR=/usr/ccs/bin/ar
+
+#==========================================================
+# for Matlab
+export HAVE_MATLAB      = true
+export HAVE_SIMULINK    = true
+export HAVE_RTW         = true
+export MATLAB_INCDIR    = -I$(MATLAB)/extern/include
+export SIMULINK_INCDIR  = $(MATLAB_INCDIR) -I$(MATLAB)/simulink/include
+export RTW_INCDIR       = $(SIMULINK_INCDIR) -I$(MATLAB)/rtw/c/libsrc -I$(MATLAB)/rtw/c/src
+export MATLAB_LIBDIR    = $(MATLAB)/extern/lib/sol2
+export MATLAB_LIBS      = -R$(MATLAB_LIBDIR) -L$(MATLAB_LIBDIR) -leng -lmat -lmx -lmi -lut
+
+#==========================================================
+# are we building our own shared libraries?
+ifeq ($(BUILDING_SHARED_LIBS),)
+  BUILDING_SHARED_LIBS = true
+endif
+export BUILDING_SHARED_LIBS
+
+ifeq ($(BUILDING_SHARED_LIBS),true)
+  CC_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  CPLUSPLUS_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  GCC_EXEC_PREFIX = /home/atbe/pkgs/lib/gcc-lib/sparc-sun-solaris2.7/2.95.2
+  LD_SHARED = $(LD) -G -L$(YAM_ROOT)/lib/$(YAM_NATIVE) -L$(GCC_EXEC_PREFIX)
+  export LD_SHARED
+  CC_EXTRA_SHLIB = -lgcc
+  export CC_EXTRA_SHLIB
+endif
+
+#==========================================================
+# turn on/off the use of Tcl/Tk 8.0
+USE_TCLTK80 = true
+
+ifeq ($(USE_TCLTK80),true)
+  CC_DEFINES += -DUSING_TCLTK80
+  CPLUSPLUS_DEFINES += -DUSING_TCLTK80
+endif
+
+ifneq ($(USE_SHARED_LIBS),false)
+ SHARED_LIBDIR = /home/atbe/pkgs/lib/$(YAM_TARGET)-shared
+# CC_LINK_FLAGS += -L$(SHARED_LIBDIR) -R$(SHARED_LIBDIR) -R$(YAM_ROOT)/lib/$(YAM_NATIVE)
+ CC_LINK_FLAGS += -L$(SHARED_LIBDIR) -R$(SHARED_LIBDIR)
+# CPLUSPLUS_LINK_FLAGS += -L$(SHARED_LIBDIR) -R$(SHARED_LIBDIR) -R$(YAM_ROOT)/lib/$(YAM_NATIVE)
+ CPLUSPLUS_LINK_FLAGS += -L$(SHARED_LIBDIR) -R$(SHARED_LIBDIR)
+endif
+
+#==========================================================
+# for ACE TAO Corba
+#export ACE_ROOT = /proj/mds/usr/build/ace-tao/ACE_wrappers/build/solaris-cc50
+#export ACE_ROOT=/proj/mds/build/ace-tao/ACE_wrappers/build/solaris-cc50
+SIM_LIBS=-L${MDS_ROOT}/source/sim/delivery/sol/SUNWspro/lib \
+	-lsimserverif -lSimTime -lCorbaTemplate -liIru -liPower -liSru \
+	-liSunSensor -liThruster
+
+SIM_INCLUDES=-I${MDS_ROOT}/source/sim/delivery/share/include
+
+export SPARCWKS_CC_PATH = /opt/uce-sparc-sunos5.5/bin
+
+#==========================================================
+# for TCL
+export HAVE_TCL		= true
+export TCL_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+export TCL_INCDIR	= -I/home/atbe/pkgs/include/tcl8.0
+export TCL_LIBS		= -L$(TCL_LIBDIR) -ltcl8.0 -ldl -lm
+
+# for TK
+export X11_LIBDIR	= /opt/X11R6/lib
+export HAVE_TK		= true
+export TK_LIBDIR	= $(TCL_LIBDIR)
+export TK_INCDIR	= $(TCL_INCDIR) -I/home/atbe/pkgs/include/tk8.0 \
+				-I/opt/X11R6/include
+
+export TK_LIBS		= -L$(TK_LIBDIR) -ltk8.0 -lX11 $(TCL_LIBS)
+
+# for TIX
+export HAVE_TIX		= true
+export TIX_LIBDIR	= $(TCL_LIBDIR)
+export TIX_INCDIR	= $(TK_INCDIR) -I/home/atbe/pkgs/include
+export TIX_LIBS		= -L$(TIX_LIBDIR) -ltix4.1.8.0 $(TK_LIBS)
+
+#==========================================================
+# Motif flags
+export MOTIF_LIBS = -L/usr/dt/lib -R/usr/dt/lib -lXm
+export MOTIF_INCDIR = -I/usr/dt/include
+
+#==========================================================
+# for Tramel - use FST version
+#export HAVE_TRAMEL   = true
+#export HAVE_TRAMEL   = false
+
+ifeq ($(HAVE_TRAMEL),true)
+  CC_DEFINES += -Dsparc
+  CPLUSPLUS_DEFINES += -Dsparc
+endif
+
+# April 1998 version
+export TRAMEL_INCDIR = -I/opt/fst/include
+export TRAMEL_LIBDIR = /opt/fst/lib
+
+# June 1997 version
+#export TRAMEL_LIBDIR = /proj/proto/v2.2/tramel/sparc-sunos5
+#export TRAMEL_INCDIR = -I/proj/proto/v2.2/tramel/include
+
+export TRAMEL_LIBS   = -L$(TRAMEL_LIBDIR) -ltramel -ltcltramel
+
+#==========================================================
+# for RTI's Stethoscope
+STETHOSCOPEHOME = /home/atbe/pkgs/src/rti/scope.5.0d
+RTILIBHOME = /home/atbe/pkgs/src/rti/rtilib.3.7l
+export HAVE_SCOPE	= true
+export SCOPE_INCDIR	= -I$(STETHOSCOPEHOME)/include/$(RTI_OS) \
+				-I$(STETHOSCOPEHOME)/include/share
+export SCOPE_LIBS	= $(STETHOSCOPEHOME)/lib/$(RTI_TARGET)/libscope.a \
+			      $(RTILIBHOME)/lib/$(RTI_TARGET)/libutilsip.a

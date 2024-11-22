@@ -1,0 +1,65 @@
+#############################################################################
+#
+#  UNIX makefile for Sun4 architecture, SunOS version 4.1.x.
+#
+# modification history
+# ------------ -------
+# RTI,08jun94,vwc GNU make no longer exports variables to the
+#		  environment, so -B$(GCC_EXEC_PREFIX) is *required*
+
+#============================================================================
+# Define the architecture-dependent toolset.
+# Sysadmin: edit these to reflect your system configuration
+
+# Just in case some VxWorks libraries (like lstLib) are used.
+# vxHome = /local/VxWorks/sparcVx5
+
+#============================================
+#  for using system GCC
+export CC = /opt/gnu/bin/m68k-vxworks-gcc
+export LD = /opt/gnu/bin/m68k-vxworks-ld
+export COMPILER_PATH=/opt/gnu/lib/gcc-lib/m68k-vxworks/2.7.2/
+export CPLUSPLUS=$(CC)
+
+#========================
+# for using RTI's GCC
+
+ifndef VX_VW_BASE
+  export vxHome =/opt/vxworks-5.2
+else
+  export vxHome = $(VX_VW_BASE)
+endif
+
+export gnuBin = $(RTIHOME)/gnu/sparcSunos4-m68k/bin
+export GCC_EXEC_PREFIX = $(RTIHOME)/gnu/sparcSunos4-m68k/lib/gcc-lib/
+export COMPILER_PATH=$(RTIHOME)/gnu/sparcSunos4-m68k/lib/gcc-lib/sparcSunos4-m68k/2.6.2/
+
+export CC = $(gnuBin)/gcc -B$(GCC_EXEC_PREFIX) -m68020-40 -DVXWORKS -DCPU=MC68040 -I$(vxHome)/h
+
+export LD = $(gnuBin)/m68k-ld
+export GPLUSPLUSLDFLAGS = -Ur -X
+export AS = $(gnuBin)/as
+export AR = $(gnuBin)/m68k-ar
+export RANLIB = $(gnuBin)/m68k-ranlib
+
+export CPLUSPLUS = $(gnuBin)/gcc -B$(GCC_EXEC_PREFIX) -m68020-40
+#========================
+
+#export MYEXTRASDIR=$(ATBE_ROOT)/src/cs-utils
+export RTI_TARGET=m68kVx5.1
+
+
+#export TCL_LIBDIR=/home/jain/src/lib
+
+export XIPC_HOME=/proj/nm-ds1/integration/ipc
+export DSHELLHOME=$(ATBE_ROOT)/src/Dshell
+
+#export DSHELLLIBS_DIR=$(MYCSHOME)/applications/FSW/generic/Dshell-libs/m68kVx5.1
+
+#export DSHELLLIBS_DIR= $(MYEXTRASDIR)/lib/$(TARGET)
+#export DSHELLLIBS = $(ATBE_ROOT)/lib/sparc-vxworks/libDshell.a
+
+export TCL_INCDIR=-I/usr/local/include
+
+export MYCOMPILATIONFLAGS = -DVXWORKS $(TCL_INCDIR)
+#export CSREALTYPE=double

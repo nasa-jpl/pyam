@@ -1,0 +1,54 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+#==========================================================
+include $(SITEDEFSHOME)/site.common
+include $(SITEDEFSHOME)/sites/site.gcc
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+#===========================================
+# C compiler and flags for the native target
+CC = $(VX_VW_BASE)/gnu/sun4.68k/bin/cc68k
+#export GCC_EXEC_PREFIX =
+export GCC_EXEC_PREFIX = $(VX_VW_BASE)/gnu/sun4.68k/lib/gcc-lib/
+
+CC_OPTIM_CFLAGS = -ggdb3 -DVXWORKS -DCPU=MC68040 -Wall -ansi -pedantic \
+		       -Wmissing-prototypes -Waggregate-return
+
+SYS_INCLUDE_FLAGS = -I$(VX_VW_BASE)/h
+
+CPLUSPLUS =
+CPLUSPLUS_OPTIM_CFLAGS =
+
+CC_DEPEND_FLAG = -MM
+
+AR = $(VX_VW_BASE)/gnu/sun4.68k/bin/ar68k r
+LD = $(VX_VW_BASE)/gnu/sun4.68k/bin/ld68k -r
+RANLIB = $(VX_VW_BASE)/gnu/sun4.68k/bin/ranlib68k
+
+TARGET_EXT = m68k-vxworks
+TARGET_OS = VXWORKS
+
+SYS_LIBS =
+
+#==========================================================
+# for TK
+export HAVE_TK = true
+
+#==========================================================
+# for TRAMEL
+HAVE_TRAMEL =
+
+#==========================================================
+# for Matlab
+export HAVE_MATLAB      = false
+export HAVE_SIMULINK    = false
+export HAVE_RTW         = false
+export MATLAB_INCDIR    = -I$(MATLAB)/extern/include
+export SIMULINK_INCDIR  = $(MATLAB_INCDIR) -I$(MATLAB)/simulink/include
+export RTW_INCDIR       = $(SIMULINK_INCDIR) -I$(MATLAB)/rtw/c/libsrc -I$(MATLAB)/rtw/c/src
+export MATLAB_LIBDIR    =
+export MATLAB_LIBS      =

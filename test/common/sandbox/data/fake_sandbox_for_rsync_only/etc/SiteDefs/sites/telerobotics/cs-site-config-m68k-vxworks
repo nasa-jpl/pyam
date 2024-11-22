@@ -1,0 +1,71 @@
+#############################################################################
+#
+#  UNIX makefile for Sun4 architecture, SunOS version 4.1.x.
+#
+# modification history
+# ------------ -------
+# RTI,08jun94,vwc GNU make no longer exports variables to the
+#		  environment, so -B$(GCC_EXEC_PREFIX) is *required*
+
+#============================================================================
+include $(SITEDEFSHOME)/site-$(YAM_SITE)/site-config-$(YAM_NATIVE)-$(YAM_TARGET)
+include $(SITEDEFSHOME)/site-$(YAM_SITE)/personal.mk
+
+#============================================================================
+export RTI_TARGET=m68kVx5.1
+
+#============================================================================
+# Define the architecture-dependent toolset.
+# Sysadmin: edit these to reflect your system configuration
+
+# Just in case some VxWorks libraries (like lstLib) are used.
+# vxHome = /local/VxWorks/sparcVx5
+
+#============================================
+#  for using system GCC
+#export CC = /opt/gnu/bin/m68k-vxworks-gcc
+#export LD = /opt/gnu/bin/m68k-vxworks-ld
+#export COMPILER_PATH=/opt/gnu/lib/gcc-lib/m68k-vxworks/2.7.2/
+export CPLUSPLUS=$(CC)
+
+#========================
+# for using RTI's GCC
+
+ifndef VX_VW_BASE
+  export vxHome = /home/vxconf/vx5.2
+else
+  export vxHome = $(VX_VW_BASE)
+endif
+
+ifeq ($(YAM_NATIVE),sparc-sunos5)
+  gnuPath = $(RTIHOME)/gnu/sparcSol2-m68k
+  VX_VW_BIN = $(VX_VW_BASE)/gnu/solaris.68k/bin
+  export COMPILER_PATH= $(gnuPath)/lib/gcc-lib/sparcSol2-m68k/2.6.2/
+else
+  gnuPath = $(RTIHOME)/gnu/sparcSunos4-m68k
+  VX_VW_BIN = $(VX_VW_BASE)/gnu/sun4.68k/bin
+  export COMPILER_PATH= $(gnuPath)/lib/gcc-lib/sparcSunos4-m68k/2.6.2/
+endif
+
+export gnuBin = $(gnuPath)/bin
+export GCC_EXEC_PREFIX = $(gnuPath)/lib/gcc-lib/
+
+export CC = $(gnuBin)/gcc -B$(GCC_EXEC_PREFIX) -m68020-40 -DCPU=MC68040 -DVXWORKS -I$(vxHome)/h
+
+export LD = $(gnuBin)/m68k-ld
+export GPLUSPLUSLDFLAGS = -Ur -X
+export AS = $(gnuBin)/as
+
+export CPLUSPLUS = $(gnuBin)/gcc -B$(GCC_EXEC_PREFIX) -m68020-40
+
+#AR = $(VX_VW_BIN)/ar68k
+#RANLIB = $(VX_VW_BIN)/ranlib68k
+
+#========================
+
+#export TCL_INCDIR=/usr/local/include
+
+#export DSHELLHOME=$(ATBE_ROOT)/src/Dshell
+
+export MYCOMPILATIONFLAGS = -DVXWORKS $(TCL_INCDIR)
+#export CSREALTYPE=double

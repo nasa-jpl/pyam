@@ -1,0 +1,106 @@
+# site specific stuff common to all site-config files
+
+#==========================================================
+RTIHOME = /home/atbe/pkgs/src/rti
+
+#==========================================================
+# load in generic flag settings
+include $(SITEDEFSHOME)/sites/shared.mk
+
+HAVE_TRAMEL =  true
+
+export USE_SITE_TERRAIN = false
+#ifeq ($(YAM_OS),unix)
+#  USE_SITE_TERRAIN = true
+#endif
+
+# targets that "alltgt-xxx" rules should skip
+#SKIP_ALLTGT_TARGETS	    ?= i486-cygwin i486-visualc xxxx
+
+#==========================================================
+F77 = /home/atbe/pkgs/bin/$(YAM_TARGET)/g77
+LIBF77 = -lg2c
+
+#==========================================================
+# for TCL
+# export TCL_VERSION	= 7.4
+# export TCL_SRCDIR	= /home/atbe/pkgs/src/tcl+tk/tcl7.4-sparc-sunos5
+# export TCL_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+# export TCL_INCDIR	= -I/home/atbe/pkgs/include/tcl7.4 $(FWRITABLE_STRINGS_OPT)
+# export TCL_LIBS	= $(TCL_LIBDIR)/libtcl.a -lm
+
+# for TK
+# export TK_VERSION	= 4.0
+# #export TK_SRCDIR	= /home/atbe/pkgs/src/tcl+tk/tk4.0-sparc-sunos5
+# export TK_LIBDIR	= $(TCL_LIBDIR)
+# export TK_INCDIR	= $(TCL_INCDIR) -I/home/atbe/pkgs/include/tk4.0
+# export TK_LIBS		= $(TK_LIBDIR)/libtk.a -lX11 $(TCL_LIBS)
+
+# for TIX
+# export TIX_LIBDIR	= $(TCL_LIBDIR)
+# export TIX_INCDIR	= $(TK_INCDIR) -I/home/atbe/pkgs/include/tix4.1
+# export TIX_LIBS		= $(TIX_LIBDIR)/libtix.a $(TK_LIBS)
+
+#==========================================================
+# for TRAMEL
+export TRAMEL_INCDIR	= -I$(YAM_ROOT)/include/Tramel
+export TRAMEL_LIBDIR	= .
+export TRAMEL_LIBS	= -ltramel
+
+ifeq ($(YAM_TARGET),m68k-vxworks)
+  TRAMEL_INCDIR += -Dmc68000
+endif
+
+#==========================================================
+# for Mesa
+MESA_DIR = /home/atbe/pkgs/src/Mesa/Mesa-3.0-solaris
+export MESA_INCDIR      = -I$(MESA_DIR)/include -I$(MESA_DIR)/widgets-mesa/include
+export MESA_LIBS        = $(MESA_DIR)/lib/libMesaGLU.a $(MESA_DIR)/lib/libMesaGL.a -lXt -lXext -lX11
+
+#==========================================================
+# machine vision code location
+MVDIR 				:= /home/mv/src
+MV_INCS 			:= -I$(MVDIR)/../include -I$(MVDIR)/stereo \
+			           -I$(MVDIR)/mat3 -I$(MVDIR)/fileio -I$(MVDIR)/cmod
+
+
+#==========================================================
+# for RTI's NDDS
+export NDDS_INCDIR	= -I$(NDDSHOME)/include/$(RTI_OS) \
+				-I$(NDDSHOME)/include/share
+export NDDS_SOLIBS	= $(NDDSHOME)/lib/$(RTI_TARGET)/libndds.a \
+				$(RTILIBHOME)/lib/$(RTI_TARGET)/libutilsip.a
+
+export NDDS_LIBS = $(NDDS_SOLIBS)
+
+#==========================================================
+# for Matlab
+export HAVE_MATLAB      = false
+export HAVE_SIMULINK    = false
+export HAVE_RTW         = false
+export MATLAB42c        = /v/matlab-4.2c
+#export MATLAB          = /v/matlab-5.1
+#export MATLAB          = /afs/jpl/rep/d/dhub/released/sun4x_55/matlab-5.3
+export MATLAB52         = /v/matlab
+export MATLAB60         = /v/matlab6
+
+export MATLAB           = $(MATLAB52)
+#export MATLAB           = $(MATLAB60)
+
+export MATLAB_INCDIR    = -I$(MATLAB)/extern/include
+export SIMULINK_INCDIR  = $(MATLAB_INCDIR) -I$(MATLAB)/simulink/include
+export RTW_INCDIR       = $(SIMULINK_INCDIR) -I$(MATLAB)/rtw/c/libsrc -I$(MATLAB)/rtw/c/src
+export MATLAB_LIBDIR    =
+export MATLAB_LIBS      =
+
+#==========================================================
+# for Perl
+#export PERL 		= /share/local/bin/perl
+export PERL 		= /home/atbe/pkgs/bin/$(YAM_TARGET)/perl
+
+#==========================================================
+export M4 = /home/atbe/pkgs/bin/$(YAM_NATIVE)/m4
+
+#==========================================================
+# for converting POD documentation into HTML
+SDFBIN			:= /home/atbe/pkgs/bin/sdf

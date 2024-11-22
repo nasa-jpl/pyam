@@ -1,0 +1,86 @@
+# site specific stuff common to all site-config files
+
+#==========================================================
+RTIHOME = /home/atbe/pkgs/src/rti
+
+#==========================================================
+# for RTI's Stethoscope
+SCOPE_50 = true
+SCOPEGCCEXT =
+
+#==========================================================
+# load in generic flag settings
+include $(SITEDEFSHOME)/sites/shared.mk
+
+export HAVE_NDDS	= false
+export HAVE_TRAMEL	= false
+
+#==========================================================
+CC_DEFINES += -DHSS_MT_TCL
+#export CC              = /home/atbe/pkgs/bin/$(YAM_TARGET)/gcc
+export CC               = /TPS/$(TPSVER)/bin/gcc
+export CPLUSPLUS        = /TPS/$(TPSVER)/bin/gcc
+
+#==========================================================
+# for TCL
+#export TCL_VERSION      = 7.4
+##export TCL_SRCDIR       = /home/atbe/users/hss/mttcl7
+##export TCL_LIBDIR	= /home/atbe/users/hss/mttcl7
+##export TCL_INCDIR	= -DHSS_MT_TCL -I/home/atbe/users/hss/mttcl7 $(FWRITABLE_STRINGS)
+#ifndef TCL_SRCDIR
+#  export TCL_SRCDIR       = /home/gvaughan/hss/zipsim7/tcl7
+#endif
+#ifndef TCL_LIBDIR
+#  export TCL_LIBDIR       = /home/gvaughan/hss/zipsim7/tcl7
+#endif
+#export TCL_INCDIR	= -DHSS_MT_TCL -I$(TCL_SRCDIR) $(FWRITABLE_STRINGS)
+#export TCL_LIBS		= $(TCL_LIBDIR)/tcl7.oa -L$(YAM_ROOT)/lib/$(YAM_TARGET) \
+#                                -lMtclStubs -lm
+#export TCL_LIBX		= -L$(YAM_ROOT)/lib/$(YAM_TARGET) \
+#                                -lMtclStubs -lm
+#
+## for TK
+#export TK_VERSION       = 4.0
+##export TK_SRCDIR	= /home/atbe/users/hss/mttk4
+##export TK_LIBDIR	= /home/atbe/users/hss/mttk4
+##export TK_INCDIR	= $(TCL_INCDIR) -I/home/atbe/users/hss/mttk4
+#ifndef TK_SRCDIR
+#  export TK_SRCDIR      = /home/gvaughan/hss/zipsim7/tk4
+#endif
+#ifndef TK_LIBDIR
+#  export TK_LIBDIR      = /home/gvaughan/hss/zipsim7/tk4
+#endif
+#export TK_INCDIR	= $(TCL_INCDIR) -I$(TK_SRCDIR)
+#export TK_LIBS		= $(TK_LIBDIR)/tk4.oa -L/usr/openwin/lib -lX11 \
+#				$(TCL_LIBS)
+
+#==========================================================
+# for TRAMEL
+export TRAMEL_INCDIR	= -I$(YAM_ROOT)/include/Tramel
+export TRAMEL_LIBDIR	=
+export TRAMEL_LIBS	= -ltramel
+
+#==========================================================
+# for Mesa
+export MESA_INCDIR	= -I/home/atbe/pkgs/include
+export MESA_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+export MESA_LIBS	= $(MESA_LIBDIR)/libMesaGLU.a $(MESA_LIBDIR)/libMesaGL.a
+
+#==========================================================
+# for RTI's NDDS
+export NDDS_INCDIR	= -I$(NDDSHOME)/include/$(RTI_OS) \
+				-I$(NDDSHOME)/include/share
+export NDDS_LIBS	= $(NDDSHOME)/lib/$(RTI_TARGET)/libndds.a \
+				$(RTILIBHOME)/lib/$(RTI_TARGET)/libutilsip.a
+
+#==========================================================
+# for Matlab
+export HAVE_MATLAB      = false
+export HAVE_SIMULINK    = false
+export HAVE_RTW         = false
+export MATLAB		= /opt/matlab-5.3
+export MATLAB_INCDIR	= -I$(MATLAB)/extern/include
+export SIMULINK_INCDIR  = $(MATLAB_INCDIR) -I$(MATLAB)/simulink/include
+export RTW_INCDIR       = $(SIMULINK_INCDIR) -I$(MATLAB)/rtw/c/libsrc -I$(MATLAB)/rtw/c/src
+export MATLAB_LIBDIR    =
+export MATLAB_LIBS	=

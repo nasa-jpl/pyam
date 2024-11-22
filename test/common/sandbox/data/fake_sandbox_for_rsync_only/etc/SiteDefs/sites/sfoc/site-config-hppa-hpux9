@@ -1,0 +1,23 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+#==========================================================
+#include $(SITEDEFSHOME)/site.common
+
+#include $(SITEDEFSHOME)/sites/site.gcc
+# this file contains rules for "gcc" based compilations.
+# It can be included by any site-config file for gcc based compilation
+
+#==========================================================
+# for Matlab
+export HAVE_MATLAB	= false
+export HAVE_SIMULINK    = false
+export HAVE_RTW         = false
+
+#==========================================================
+# for Perl
+export PERL		= /afs/jpl.nasa.gov/ets/released/hp700_ux90/ets/bin/perl5

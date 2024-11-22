@@ -1,0 +1,89 @@
+#!/bin/sh
+#
+# locate - find directory that specified binary is in
+# pretty much like "which", but can trace symbolic links and not aliases
+
+# check command line usage
+# if "-s" option is supplied, traces symbolic links
+followLinks="0"
+if [ "$1" = "-s" ]; then
+    followLinks="1"
+    if [ "$#" != "2" ]; then
+        echo "usage: `basename $0` [-s] <executable>"
+        exit 2
+    fi
+    exe=$2
+elif [ "$#" != "1" ]; then
+    echo "usage: `basename $0` [-s] <executable>"
+    exit 2
+else
+    exe=$1
+fi
+
+# find directory containing specified executable
+dir=""
+if [ `echo $exe | sed s@\^/@@` = "$exe" ]; then
+    if [ `echo $exe | sed s@/@@` = "$exe" ]; then
+        # does not contain a slash - must search PATH
+        for i in `echo $PATH | sed s/:/\ /g` ; do
+            if [ -x "$i/$exe" ]; then
+                dir=$i
+                break
+            fi
+        done
+        if [ "X$dir" = "X" ]; then
+            echo "Error: no such executable $exe"
+            exit 1
+        fi
+    else
+        # contains, but does not start with slash
+        # must prepend current working directory
+        exe="`pwd`/$exe"
+        if [ ! -x "$exe" ]; then :
+            echo "Error: no such executable $exe"
+            exit 1
+        fi
+        dir=`dirname $exe`
+    fi
+else
+    # starts with a slash
+    if [ ! -x "$exe" ]; then :
+        echo "Error: no such executable $exe"
+        exit 1
+    fi
+    dir=`dirname $exe`
+fi
+
+# cd to the directory that contains the executable
+cd $dir
+if [ $? -ne 0 ]; then echo "$dir: not found"; exit 1; fi
+
+# follow symbolic links if requested, cd to directory containing the executable
+if [ "$followLinks" = "1" ]; then
+    link=`basename $exe`
+    while [ ! -z "$link" ]; do
+        dir=`dirname $link`
+        if [ ! -z "$dir" ]; then
+            cd $dir
+            if [ $? -ne 0 ]; then echo "$dir: not found"; exit 1; fi
+        fi
+        file=`basename $link`
+        link=`ls -l $file | sed -n -e 's/^.*-> \(.*\)/\1/p'`
+    done
+fi
+
+# see if leading /tmp_mnt or /export should be stripped from path
+strip_tmp=0;
+if [ "$YAM_NATIVE" = "sparc-sunos4" ]; then
+    strip_tmp=1;
+fi
+
+# echo the current directory, strip out nfs stuff
+if [ $strip_tmp = 1 ]; then
+  dir=`pwd | sed -e 's@^/tmp_mnt@@' -e 's@^/export@@'`
+else
+  dir=`pwd`
+fi
+#dir=`pwd | sed -e 's@^/tmp_mnt@@' -e 's@^/export@@'`
+echo "$dir"
+exit 0

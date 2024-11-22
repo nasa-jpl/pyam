@@ -1,0 +1,27 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+HAVE_NDDS	= FALSE
+
+#==========================================================
+#include $(SITEDEFSHOME)/site.common
+include $(SITEDEFSHOME)/sites/site.gcc
+
+#==========================================================
+# for Matlab
+export HAVE_MATLAB      = false
+export HAVE_SIMULINK    = false
+export HAVE_RTW         = false
+export MATLAB_INCDIR    = -I$(MATLAB)/extern/include
+export SIMULINK_INCDIR  = $(MATLAB_INCDIR) -I$(MATLAB)/simulink/include
+export RTW_INCDIR       = $(SIMULINK_INCDIR) -I$(MATLAB)/rtw/c/libsrc -I$(MATLAB)/rtw/c/src
+export MATLAB_LIBDIR    = $(MATLAB)/extern/lib/hp700
+export MATLAB_LIBS      = -R$(MATLAB_LIBDIR) -L$(MATLAB_LIBDIR) -leng -lmat -lmx -lmi -lut
+
+#==========================================================
+# for Perl
+export PERL		= /afs/jpl.nasa.gov/ets/released/hp700_ux90/ets/bin/perl5

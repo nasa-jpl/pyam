@@ -1,0 +1,32 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-i486-fedora4-linux
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+
+#SOXT_CFLAGS = -I/home/atbe/pkgs/i486-fedora5-linux/stow/SoXt-1.2.2/include
+#SOXT_LIBS = -L/home/atbe/pkgs/i486-fedora5-linux/lib -lSoXt $(MOTIF_LIBS)  -lX11 -lXt
+
+##SOXT_LIBS := -L/home/atbe/pkgs/i486-fedora5-linux/lib -lSoXt  \
+##               $(MOTIF_LIBS)
+
+# removed -lXpm  -lXmu -lX11 -lXt -lXi -lSM -lICE
+
+# needed by libXt
+# SOXT_LIBS +=
+
+# don't have libGLU.a as a static library
+#export GL_LIBS          = -Wl,-Bdynamic -L/usr/X11R6/lib -lGLU -lGL \
+#                             $(MOTIF_LIBS) -lXpm -lXmu -lXp -lXft -lfontconfig  \
+#			     -lXt -lXi -lX11

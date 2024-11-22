@@ -1,0 +1,59 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-i486-fedora8-linux
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+
+#================================================
+PYTHONDIR             := /usr
+PYTHON_BIN            := $(PYTHONDIR)/bin/python
+PYTHON_INCDIR	      := -I/usr/include/python2.5
+PYTHON_LIBS	      := -L/usr/lib/python2.5 -lpython2.5
+PYTHONPATH	      :=
+
+#================================================
+HAVE_HDF5	:= true
+#HDF5_DIR	:= /home/dlab/pkgs/$(YAM_TARGET)/stow/hdf5-1.6.5
+HDF5_DIR	:= /usr
+HDF5_LIBS       := -L$(HDF5_DIR)/lib -lhdf5_cpp -lhdf5
+HDF5_INCDIR	:= $(HDF5_DIR)/include
+
+#================================================
+COIN_INCDIR     :=  /usr/include/Coin2
+COIN_INC     :=  \
+                -I/usr/include/Coin2 -DCOIN3D
+
+COIN_LIBS       := \
+                -L$(COIN_DIR)/lib \
+                -lCoin \
+                 -L/home/dlab/pkgs/$(YAM_TARGET)/stow/simage-1.6.1/lib -lsimage
+
+SOXT_CFLAGS = -I/home/dlab/pkgs/$(YAM_TARGET)/stow/SoXt-1.2.2/include \
+                -I/usr/lib64/glib-2.0/include \
+                -I/usr/lib64/gtk-2.0/include
+SOXT_LIBS = -L/home/dlab/pkgs/$(YAM_TARGET)/stow/SoXt-1.2.2/lib -lSoXt
+
+HAVE_SOGTK  := false
+
+
+
+#==========================================================
+#
+# Spice installation
+#
+CSPICE_DIR	:= /home/dlab/pkgs/src/spice/cspice-v62-64bit
+
+#==========================================================
+JPLV_INCS	:= -I/home/dlab/pkgs/$(YAM_TARGET)/stow/jplv-1.2.1/include
+JPLV_LIBS	:= -L/home/dlab/pkgs/$(YAM_TARGET)/stow/jplv-1.2.1/lib -ljplv

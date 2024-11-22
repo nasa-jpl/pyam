@@ -1,0 +1,18 @@
+LINK_MODULES = DshellEnv/DshellEnv-R1-04d Dshell++/Dshell++-R4-06f
+LINK_MODULES = Dshell++/Dshell++-R4-06g \
+               DshellEnv/DshellEnv-R1-49r
+# BRANCH_Dshell++  = Dshell++-R4-06g
+# BRANCH_DshellEnv = DshellEnv-R1-49r
+WORK_MODULES = Dshell++ \
+               DshellEnv
+BRANCH_Dshell++  = Dshell++-R4-06g  jain
+BRANCH_DshellEnv = DshellEnv-R1-49r jain
+WORK_MODULES = Dshell++ \
+               DshellEnv
+BRANCH_Dshell++  = Dshell++-R4-06g  junk
+BRANCH_DshellEnv = DshellEnv-R1-49r junk
+WORK_MODULES = Dshell++ \
+               DshellEnv
+BRANCH_Dshell++  = Dshell++-R4-06g
+BRANCH_DshellEnv = DshellEnv-R1-49r
+OK

@@ -1,0 +1,26 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+export ETS = /afs/jpl.nasa.gov/tool/released/sun4c_411/ets
+
+#==========================================================
+#include $(SITEDEFSHOME)/site.common
+
+#include $(SITEDEFSHOME)/sites/site.gcc
+# this file contains rules for "gcc" based compilations.
+# It can be included by any site-config file for gcc based compilation
+
+CC_INCLUDES	+= -I/usr/openwin/include
+CC_LIBS		+= -L/usr/openwin/lib
+
+#==========================================================
+# for Matlab
+export MATLAB_LIBS	= -L$(MATLAB)/extern/lib/sun4
+
+#==========================================================
+# for Perl
+export PERL		= /afs/jpl.nasa.gov/ets/released/sun4m_412/ets/bin/perl5

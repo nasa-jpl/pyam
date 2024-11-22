@@ -1,0 +1,60 @@
+#!/bin/sh
+#
+# yamroot - script to determine YAM_ROOT starting from a directory
+#           or executable, by looking for YAM.config as well as
+#           common/YAM.modules in parent directories
+
+# check command line arguments
+dir=""
+if [ "$#" = "0" ]; then
+    dir=`pwd`
+elif [ "$#" = "1" ]; then
+    if test -d $1; then
+        dir=$1
+
+        # prepend current working directory if necessary
+        if [ `echo $dir | sed s@\^/@@` = "$dir" ]; then
+            dir="`pwd`/$dir"
+        fi
+    else
+        dir=`locate $1`
+        if [ $? -ne 0 ]; then
+            echo "Error: could not locate $1"
+            exit 1
+        fi
+    fi
+else
+    echo "usage: `basename $0` [ <directory> | <executable> ]"
+    exit 2
+fi
+
+# see if environment variable is already set
+if [ "X$YAM_ROOT" != "X" ]; then
+    echo $YAM_ROOT
+    exit 0
+fi
+
+# search for YAM.config
+ndir=$dir
+while [ "$ndir" != "/" ]; do
+    if test -f "$ndir/YAM.config"; then
+#      if test -f "$ndir/common/YAM.modules"; then
+        # clean up directory name
+        cd $ndir
+        if [ $? -ne 0 ]; then echo "$ndir: not found"; exit 1; fi
+        ndir=`pwd`
+
+        # all done
+        echo $ndir
+        exit 0
+#      else
+#        ndir=`dirname $ndir`
+#      fi
+    else
+        ndir=`dirname $ndir`
+    fi
+done
+
+# no YAM.config was found
+echo "Error: no YAM.config was found in or above $dir"
+exit 1

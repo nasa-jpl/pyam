@@ -1,0 +1,4228 @@
+#!/usr/bin/env python
+# PYTHON_ARGCOMPLETE_OK
+#
+# Copyright 2011-2016, by the California Institute of Technology. ALL RIGHTS
+# RESERVED. United States Government Sponsorship acknowledged. Any commercial
+# use must be negotiated with the Office of Technology Transfer at the
+# California Institute of Technology.
+#
+# This software may be subject to U.S. export control laws. By accepting this
+# software, the user agrees to comply with all applicable U.S. export laws and
+# regulations. User has the responsibility to obtain export licenses, or other
+# export authority as may be required before exporting such information to
+# foreign countries or providing access to foreign persons.
+
+"""A utility for managing repositories as separate modules.
+
+https://insidedlab.jpl.nasa.gov/internal/www/pyam/
+
+"""
+
+# For error-handling purposes, we do not do yam imports at the module scope.
+# The yam imports are done at the function scope.
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+import argparse
+import ast
+import contextlib
+import getpass
+import os
+
+# pipes is a deprected module
+# import pipes
+import shlex
+import platform
+import re
+import signal
+import socket
+import sys
+import tempfile
+import time
+from dateutil import parser
+
+import sys
+
+if not (sys.version_info.major == 3 and sys.version_info.minor >= 5):
+    print("This script requires Python 3.5 or higher!")
+    print("You are using Python {}.{}.".format(sys.version_info.major, sys.version_info.minor))
+    sys.exit(1)
+
+
+# I import this here instead of where it is used because when a 'pyam save pyam'
+# happens, pyam wants to send email, but the email_utils.py file is no longer
+# there, since the tree was moved.
+from yam import email_utils
+from yam import yam_log
+from yam import yam_exception
+from yam import __version__
+from yam.module import WorkModuleType
+
+# I want to read and write everything in UTF-8, regardless of how the user has
+# their environment set up
+import locale
+
+locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
+
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    # Python 2.
+    from urlparse import urlparse
+
+try:
+    from configparser import ConfigParser as SafeConfigParser
+except ImportError:
+    # Python 2.
+    from ConfigParser import SafeConfigParser
+
+try:
+    from configparser import Error as ConfigParserError
+except ImportError:
+    # Python 2.
+    from ConfigParser import Error as ConfigParserError
+
+
+PROGRESS_PREFIX = "--->  "
+
+
+try:
+    raw_input
+except NameError:
+    # Python 3.
+    raw_input = input  # pylint: disable=W0622
+
+# the name of the the special package to use for baseline releeases
+baseline_pkg = "BaselinePkg"
+
+
+class CommandInterpreter(object):
+    """Call appropriate functions based on command line commands."""
+
+    def __init__(self):
+        self.__client = None
+        self.__sandbox_root_directory = None
+        self.__operating_system_name = None
+        self.__release_directory = None
+        self.__changelogs_path = None
+        self.__keep_release = True
+        self.__site_name = None
+        self.__host_ip = None
+        self.__keyword_to_repository_dictionary = None
+        self.__colorize = False
+        self.__use_lock = True
+
+        self.__smtp_host = None
+        self.__smtp_port = None
+        self.__email_to_address = None
+        self.__email_from_address = None
+
+        self.__empty_log_filter = lambda x: x
+
+        self.__progress_callback = lambda _: None
+
+        self.__confirmation_callback = lambda _: None
+        # self.__use_git = None
+
+    def set_client(
+        self,
+        client,
+        sandbox_root_directory,
+        operating_system_name,
+        release_directory,
+        changelogs_path,
+        keep_release,
+        site_name,
+        host_ip,
+        keyword_to_repository_dictionary,
+        use_lock,
+    ):
+        # use_git):
+        """Set the client object along with related information.
+
+        This is a setter rather than a part of the constructor because we need
+        the pass this object to argparse before we create the parameters.
+        (The objects listed in the parameters are created after we parse the
+        command-line options. But we need to the CommandInterpreter before we
+        parse the options.)
+
+        """
+        # print('UUUUU', release_directory)
+        self.__client = client
+        self.__sandbox_root_directory = sandbox_root_directory
+        self.__operating_system_name = operating_system_name
+        self.__release_directory = release_directory
+        self.__changelogs_path = changelogs_path
+        # self.__use_git = use_git
+        # if no release directory has been specified then keep_release should be False
+        if release_directory:
+            self.__keep_release = keep_release
+        else:
+            self.__keep_release = False
+        self.__site_name = site_name
+        self.__host_ip = host_ip
+        self.__keyword_to_repository_dictionary = keyword_to_repository_dictionary
+        self.__use_lock = use_lock
+
+    def set_email(self, smtp_host, smtp_port, email_to_address, email_from_address):
+        """Optionally call to enable email release notes."""
+        self.__smtp_host = smtp_host
+        self.__smtp_port = smtp_port
+        self.__email_to_address = email_to_address
+        self.__email_from_address = email_from_address
+
+    def set_colorize(self, colorize):
+        """Set to True to enable color text output."""
+        self.__colorize = colorize
+
+    def set_progress_callback(self, callback):
+        """For doing things like printing progress messages."""
+        self.__progress_callback = callback
+
+    def set_empty_log_filter(self, empty_log_filter):
+        """Set the function that filters empty logs.
+
+        This can be used to invoke a text editor to fill in the log.
+
+        """
+        self.__empty_log_filter = empty_log_filter
+
+    def set_confirmation_callback(self, callback):
+        """Set callback for interactive confirmation.
+
+        This callback will be called before destructive commands.
+
+        """
+        self.__confirmation_callback = callback
+
+    def setup_command(self, args):
+        """Set up a sandbox."""
+
+        module_names = None
+        configuration = None
+
+        if args.modules:
+            module_names = unique_list(args.names)
+        elif args.configuration:
+            if len(args.names) != 1:
+                raise yam_exception.YamException("A single configuration filename is expected with " "--configuration")
+
+            try:
+                from yam.concrete_configuration_reader import read_sandbox_configuration
+
+                _configuration = read_sandbox_configuration(args.names[0])
+                configuration = {"work_modules": _configuration["work_modules"], "link_modules": {}}
+                link_modules = _configuration["link_modules"]
+                # os.path.join does not like None values for the
+                # release_directory, it needs to be a string so make
+                # sure that is so
+                if args.release_directory is None:
+                    args.release_directory = ""
+                for module in link_modules:
+                    (tag, buildid, maintName, maintNum) = link_modules[module]
+                    # print('KKK', module, self.__release_directory, link_modules)
+                    releasedir_thismodule = os.path.join(args.release_directory, "Module-Releases", module)
+                    # build up the name of the module release directory
+                    # that this link module is referring to
+                    # from yam import concrete_configuration_reader
+                    from yam import revision_tag_utils
+
+                    tagstr = revision_tag_utils.tuple_to_release_tag_suffix(tag=link_modules[module], use_build=True)
+                    d = os.path.join(releasedir_thismodule, module + "-" + tagstr)
+                    """
+                    if buildid is not None:
+                        d += "-Build" + buildid
+                    elif maintName is not None:
+                        d += "-" + maintName + "-MaintenanceM" + str(maintNum).zfill(2)
+                    """
+
+                    if os.path.exists(d):
+                        # This link module exists. Use it
+                        configuration["link_modules"][module] = link_modules[module]  # (tag, buildid)
+                    else:
+                        # Path doesn't exist. Convert to a work module
+                        configuration["work_modules"][module] = (tag, "")
+
+                        msg = "Note: requested link module {}:{} doesn't exist. Converting to work module".format(
+                            module, (tag, buildid)
+                        )
+                        yam_log.say(msg)
+                        print(msg)
+
+            except IOError as exception:
+                raise yam_exception.YamException(str(exception))
+
+            module_names = []
+        else:
+            package_name = args.names[0]
+
+        if args.main_work_modules:
+            work_module_type = WorkModuleType.MAIN
+            assert not args.work_modules
+            assert not args.tagged_work_modules
+        elif args.work_modules:
+            work_module_type = WorkModuleType.BRANCH
+            assert not args.main_work_modules
+            assert not args.tagged_work_modules
+        elif args.tagged_work_modules:
+            work_module_type = WorkModuleType.TAGGED
+            assert not args.work_modules
+            assert not args.main_work_modules
+        else:
+            work_module_type = WorkModuleType.NONE
+
+        # if args.revision_tag and args.main_work_modules:
+        if args.revision_tag and (work_module_type == WorkModuleType.MAIN):
+            raise yam_exception.YamException(
+                "It does not make sense to specify the '{r}' package revision and while at the same time ask for main trunk checkouts.".format(
+                    r=args.revision_tag
+                )
+            )
+
+        if args.directory:
+            if os.path.exists(args.directory):
+                raise yam_exception.YamException("Path '{d}' already exists".format(d=args.directory))
+            elif os.path.dirname(args.directory) and not os.path.isdir(os.path.dirname(args.directory)):
+                raise yam_exception.YamException(
+                    "Path '{d}' is not a directory".format(d=os.path.dirname(args.directory))
+                )
+            else:
+                sandbox_path = args.directory
+        else:
+            # If sandbox_path is not specified, generate a unique one in the
+            # current directory.
+            sandbox_path = None
+            i = 1
+            while not sandbox_path or os.path.exists(sandbox_path):
+                if module_names is not None:
+                    base_name = "sandbox"
+                else:
+                    base_name = package_name
+                sandbox_path = "{base}-{user}{number}".format(
+                    base=base_name, user=getpass.getuser(), number=args.sandbox_format_string % i
+                )
+                i += 1
+
+        self.__progress_callback("Creating sandbox directory '{directory}'".format(directory=sandbox_path))
+
+        #         if not (args.work_modules or
+        #                 args.main_work_modules or
+        #                 args.tagged_work_modules):
+        if work_module_type == WorkModuleType.NONE:
+            if not self.__release_directory or not args.create_link_modules:
+                # args.tagged_work_modules = True
+                work_module_type = WorkModuleType.TAGGED
+
+        if module_names is not None:
+            self.__client.set_up_loose_sandbox(
+                module_names=set(module_names + ["SiteDefs"]),
+                sandbox_path=sandbox_path,
+                release_directory=self.__release_directory,
+                work_module_type=work_module_type,
+                #                 work_branch=args.work_modules,
+                #                 tagged_branch=args.tagged_work_modules,
+                #                 main_branch=args.main_work_modules,
+                progress_callback=self.__progress_callback,
+            )
+        else:
+            self.__client.set_up_package_sandbox(
+                package_name=package_name,
+                sandbox_path=sandbox_path,
+                tag=args.revision_tag,
+                release_directory=self.__release_directory,
+                work_module_type=work_module_type,
+                #                 work_branch=args.work_modules,  # want work modules on a unique branch
+                #                 tagged_branch=args.tagged_work_modules,  # wanted tagged work modules
+                #                 main_branch=args.main_work_modules,    # want main trunk modules
+                progress_callback=self.__progress_callback,
+            )
+
+        if configuration is not None:
+            from yam.concrete_configuration_writer import write_sandbox_configuration
+
+            write_sandbox_configuration(
+                os.path.join(sandbox_path, "YAM.config"),
+                configuration["work_modules"],
+                configuration["link_modules"],
+                "unknown",
+            )
+
+        if args.edit and args.text_editor:
+            edit_configuration(os.path.join(sandbox_path, "YAM.config"), text_editor=args.text_editor)
+
+        self._rebuild(
+            self.__client.work_module_names(sandbox_path),
+            sandbox_root_directory=sandbox_path,
+            check_out=args.checkout,
+            build=args.build,
+        )
+
+        self.__progress_callback("Created sandbox in '{directory}'".format(directory=sandbox_path))
+
+    def rebuild_command(self, args):
+        """Check out and (re)build a work module."""
+        with self._lock():
+            if args.module_name:
+                module_names = args.module_name
+            else:
+                module_names = self.__client.work_module_names(sandbox_root_directory=self.sandbox_root_directory())
+
+            self._rebuild(module_names, sandbox_root_directory=self.sandbox_root_directory(), build=args.build)
+
+    def _rebuild(self, module_names, sandbox_root_directory, check_out=True, build=True):
+        """Rebuild a set of modules."""
+        module_names = unique_list(module_names)
+
+        if check_out:
+            self.__client.check_out_modules(
+                module_names=module_names,
+                sandbox_root_directory=sandbox_root_directory,
+                release_directory=self.__release_directory,
+                relink=False,
+                progress_callback=self.__progress_callback,
+            )
+
+        self.__client.relink_modules(
+            module_names=module_names,
+            sandbox_directory=sandbox_root_directory,
+            release_directory=self.__release_directory,
+        )
+
+        if build and module_names:
+            self.__progress_callback("Building {}".format(module_names))
+
+            self.__client.build_modules(module_names=module_names, sandbox_root_directory=sandbox_root_directory)
+
+    def checkout_command(self, args):
+        """Add modules to the sandbox."""
+        from yam import database_reader
+
+        if len(args.module_name) > 1 and (args.release and args.release != "main"):
+            raise yam_exception.YamException(
+                "Error! 'pyam checkout --release doesn't make sense for non-trunk checkout of more than one module"
+            )
+
+        if args.release == "main":
+            if args.branch is not None:
+                raise yam_exception.YamException("Error! 'pyam checkout --release main' cannot be given with a branch")
+
+        with self._lock():
+
+            dep_modules = []
+            if args.dependencies:
+                # get the list of dependency modules if requested
+                dep_modules = self.__client.module_dependencies(args.module_name, recursive=True)
+                print("Adding dependent modules (if missing) to the sandbox:", dep_modules)
+                from yam.concrete_configuration_reader import read_sandbox_configuration
+
+                yam_config = os.path.join(self.sandbox_root_directory(), "YAM.config")
+                _configuration = read_sandbox_configuration(yam_config)
+                for m in dep_modules:
+                    # add the latest release of the dependent module as
+                    # a link module to the sandbox
+                    if m not in _configuration["work_modules"] and m not in _configuration["link_modules"]:
+                        # check if we can get a link module, or else
+                        # checkout a tagged version of the latest
+                        # release
+                        tagged = False
+                        if self.__release_directory:
+                            module_info = self.__client.latest_module_information(
+                                module_name=m, release=None, release_directory=self.__release_directory
+                            )
+                            # print('LLLL', module_info['tag'])
+                            path = os.path.join(
+                                os.path.join(self.__release_directory, "Module-Releases", m),
+                                m + "-" + module_info["tag"],
+                            )
+                            yam_log.say("Checking existince of link module path %s" % path)
+                            print("Checking existince of link module path %s" % path)
+                            if not os.path.exists(path):
+                                tagged = True
+                                yam_log.say("Link module not available for %s module - using tagged checkout" % (m))
+                                print("Link module not available for %s module - using tagged checkout" % (m))
+                        else:
+                            tagged = True
+
+                        # yam_log.say('Link module available for %s module? %s' % (m, not tagged))
+                        if not tagged:
+                            # add a link module
+                            self._check_out_link_module([m], release=None)
+                        else:
+                            # add a tagged work module
+                            module_info = self.__client.latest_module_information(
+                                module_name=m, release=None, release_directory=self.__release_directory
+                            )
+                            # print('nn', module_info)
+                            self._check_out_work_module([m], release=module_info["tag"], branch="-", build="")
+
+            # Check for existence beforehand. Without this, we can end up with
+            # partial check out if there is a non-existent module in the middle
+            # of the argument list.
+            for m in unique_list(args.module_name):
+                try:
+                    self.__client.latest_module_information(m, release=None, release_directory=self.__release_directory)
+                except database_reader.ModuleLookupException as exception:
+                    if m.lower().endswith("pkg") or m.lower().endswith("package"):
+                        raise yam_exception.YamException(
+                            str(exception) + "; perhaps you meant to use 'setup' instead of " "'checkout'"
+                        )
+                    raise
+
+            if args.branch and args.branch != "-":
+                from yam import revision_tag_utils
+
+                # verify that the branch id is legal
+                revision_tag_utils.check_legal_branch_id(args.branch)
+
+            if args.link:
+                if not self.__release_directory:
+                    raise yam_exception.YamException("release directory is needed to check out link " "modules")
+
+                self._check_out_link_module(args.module_name, release=args.release)
+            else:
+
+                if args.maintenance:
+                    print("YOU ARE CHECKING OUT A MAINTENANCE BRANCH")
+                    if args.branch:
+                        raise yam_exception.YamException(
+                            "Cannot create a {} branch off of a maintenance branch/release. Giving up.".format(
+                                args.branch
+                            )
+                        )
+
+                    project_branch_name = "{}-Maintenance".format(args.maintenance)
+                    branch = project_branch_name
+                    """
+                    maintrealesepath = self.__release_directory
+
+                    self._check_out_maint_module(args.module_name,
+                                                release=args.release,
+                                                 branch=project_branch_name,
+                                                 maintrealesepath=maintrealesepath)
+                    """
+                else:
+                    branch = args.branch
+
+                self._check_out_work_module(args.module_name, release=args.release, branch=branch, build=args.build)
+
+    def _check_out_work_module(self, module_names, release, branch, build=True):
+        """Add work modules to the sandbox and build it."""
+        from yam import client
+        from yam import module_configuration_utils
+
+        checked_out_module_names = []
+        for m in unique_list(module_names):
+            # cannot create a branch off a maintenance branch or release
+            if release and branch and (branch != "-") and re.search("-Maintenance", release):
+                raise yam_exception.YamException(
+                    "Cannot create a branch off of a maintenance release such as '{}' for the '{}' module (requested branch '{}'). Giving up.".format(
+                        release, m, branch
+                    )
+                )
+            try:
+                # write out a new YAM.config with the modules as work modules
+
+                self.__client.convert_to_work_module(
+                    module_name=m,
+                    release=release,
+                    branch=branch,
+                    sandbox_root_directory=self.sandbox_root_directory(),
+                    progress_callback=self.__progress_callback,
+                )
+            # except client.AlreadyAModuleException as exception:
+
+            except module_configuration_utils.AlreadyAModuleException as exception:
+                print("{}; doing nothing here, and moving on to the next module".format(exception), file=sys.stderr)
+            # except client.MissingModuleException:
+            except module_configuration_utils.MissingModuleException:
+                self.__client.add_work_module_to_sandbox_configuration(
+                    module_name=m,
+                    release=release,
+                    branch=branch,
+                    sandbox_root_directory=self.sandbox_root_directory(),
+                    progress_callback=self.__progress_callback,
+                )
+
+            checked_out_module_names.append(m)
+
+        # check out the work modules
+        self.__client.check_out_modules(
+            module_names=checked_out_module_names,
+            sandbox_root_directory=self.sandbox_root_directory(),
+            release_directory=self.__release_directory,
+            progress_callback=self.__progress_callback,
+        )
+
+        if build:
+            self.__client.build_modules(
+                module_names=checked_out_module_names, sandbox_root_directory=self.sandbox_root_directory()
+            )
+
+    def _check_out_link_module(self, module_names, release):
+        """Add a link modules to the sandbox and relink."""
+        from yam import client
+        from yam import module_configuration_utils
+
+        checked_out_module_names = []
+        for m in unique_list(module_names):
+            try:
+                self.__client.add_link_module_to_sandbox_configuration(
+                    module_name=m,
+                    release=release,
+                    sandbox_root_directory=self.sandbox_root_directory(),
+                    release_directory=self.__release_directory,
+                )
+            # except client.AlreadyAModuleException as exception:
+            except module_configuration_utils.MissingModuleException:
+                print("{}; doing nothing here, and moving on to the next module".format(exception), file=sys.stderr)
+
+            checked_out_module_names.append(m)
+
+        self.__client.relink_modules(
+            module_names=checked_out_module_names,
+            sandbox_directory=self.sandbox_root_directory(),
+            release_directory=self.__release_directory,
+        )
+
+    def _baselinePkgExists(self):
+        """
+        Return True if the baseline package exists.
+        """
+        try:
+            # try looking up the the latest release tag for the baseline package
+            self.__client.latest_package_revision_tag(baseline_pkg)
+            return True
+        except:
+            return False
+
+    def _getBaselineModuleInfo(self, release=None):
+        """
+        Return the module/release info from the baseline
+        release. This is a dictionary with keys being the module names,
+        and the values the release tag.
+        """
+        baseline_modrels = None
+
+        # get the config info for the BaselinePkg package release
+        pkg_release = release
+        if not pkg_release:
+            # no package release has been specified, so use the latest one
+            pkg_release = self.__client.latest_package_revision_tag(baseline_pkg)
+            assert pkg_release
+
+        print("Using %s %s baseline package release" % (baseline_pkg, pkg_release))
+        baseline_modinfo = self.__client.package_release_modules(baseline_pkg, pkg_release)
+        # make a dictionary of all the modules and their release
+        # tags in this package release
+        baseline_modrels = {}
+        for i in baseline_modinfo:
+            # print('LLL', i)
+            baseline_modrels[i["name"]] = i["tag"]
+
+        return baseline_modrels
+
+    def sync_command(self, args):
+        """Sync up a module."""
+
+        maintid = None
+
+        # verify that there the baseline package exists if using the --baseline option
+        from yam import revision_tag_utils
+
+        if args.baseline:
+            if not self._baselinePkgExists():
+                raise yam_exception.YamException(
+                    "The '{}' baseline package must exist to use the --baseline option".format(baseline_pkg)
+                )
+
+            if args.release:
+                # in baseline mode, so the release tag is for the BaselinePkg package
+                # verify that the release value is legal
+                # revision_tag_utils.split_revision_tag(args.release)
+                tag, build, maintbr, maintid = revision_tag_utils.split_tag(args.release)
+                # this should be a package release tag
+                if build or maintbr or maintid:
+                    raise yam_exception.YamException(
+                        "The --release option should specific a baseline release tag with the --baseline option"
+                    )
+            #                 assert (not build)
+            #                 assert (not maintbr)
+            #                 assert (not maintid)
+            #
+
+            if args.branch:
+                raise yam_exception.YamException("The --branch option should not be used with the --baseline option")
+
+        from yam import revision_tag_utils
+
+        if args.release and not args.baseline:
+            # not in baseline mode, so the release tag is for a single module
+            if not args.module_name:
+                raise ValueError('Need to specify a single module with the "release" option.')
+            elif args.release and len(args.module_name) > 1:
+                raise ValueError('Need to specify only a single module with the "release" option.')
+            # verify that the release value is legal
+            # revision_tag_utils.split_revision_tag(args.release)
+            tag, build, maintbr, maintid = revision_tag_utils.split_tag(args.release)
+            # cannot sync to a build release
+            assert not build
+            # if the specified tag is a maintenance branch, then no
+            # branch should have been specified
+            if maintid:
+                if args.branch:
+                    raise yam_exception.YamException("Cannot specify a branch when syncing to a maintenance release")
+                # set the to branch to an empty string so that the
+                # default branch is not selected later
+                args.branch = ""
+
+        # print('SYNCOPTS', [args.all, args.work_modules, args.tagged_work_modules, args.link_modules])
+        with self._lock():
+            modified = False
+
+            # all branched/tagged work modules and link modules
+            if args.all or args.all_except is not None:
+                args.link_modules = True
+                args.work_modules = True
+
+            # only branched and tagged work modules
+            if args.work_modules:
+                args.tagged_work_modules = True
+
+            # get full list of link modules in the sandbox
+            configuration_filename = os.path.join(self.sandbox_root_directory(), "YAM.config")
+            modules_data = self.__client.modules_dictionary(configuration_filename)
+
+            all_link_module_names = list(sorted(modules_data["link_modules"]))
+            # self.__client.link_module_names(
+            #    sandbox_root_directory=self.sandbox_root_directory())
+
+            # print('LLM', all_link_module_names)
+            candidates = []
+            # add any module names requested on the command line
+            candidates += args.module_name
+
+            # print('GGG0', candidates)
+            # get list of branched and tagged modules (if they are asked for)
+            # filter out main trunk modules
+            if args.work_modules or args.tagged_work_modules:
+                if args.work_modules and args.tagged_work_modules:
+                    work_module_type = WorkModuleType.BRANCH | WorkModuleType.TAGGED
+                elif args.work_modules:
+                    work_module_type = WorkModuleType.BRANCH
+                elif args.tagged_work_modules:
+                    work_module_type = WorkModuleType.TAGGED
+
+                candidates += self.__client.work_module_names(
+                    self.sandbox_root_directory(),
+                    work_module_type=work_module_type,
+                    #                     main=False,
+                    #                     branched=args.work_modules,
+                    #                     tagged=args.tagged_work_modules
+                )
+
+            # print('GGG1', candidates)
+
+            # add in link modules if requested
+            if args.link_modules:
+                candidates += all_link_module_names
+
+            # remove any modules to be skipped
+            if args.all_except is not None:
+                for i in args.all_except:
+                    if i not in candidates:
+                        raise yam_exception.YamException('cannot skip "%s" module since it is not in the sandbox' % i)
+
+                candidates.remove(i)
+
+            # print('GGG2', candidates)
+            if not args.link_modules and not candidates:
+                raise yam_exception.YamException("sync requires at least one module argument")
+
+            # get dictionary of all work module data for the sandbox
+            all_work_module_names = self.__client.work_module_names(
+                self.sandbox_root_directory(),
+                # main=False)
+                work_module_type=WorkModuleType.BRANCH | WorkModuleType.TAGGED,
+            )
+
+            # print("LLL",  all_work_module_names, candidates)
+            work_modules = []
+            link_modules = []
+            allow_main = False
+            for name in unique_list(candidates):
+                if name in all_work_module_names:
+                    # abort if any of the work module is on a
+                    # maintenance branch
+                    wdata = modules_data["work_modules"][name]
+                    branch = wdata[1]
+                    # print('JJ', modules_data)
+                    if branch:
+                        from yam import branched_work_module
+
+                        junk = revision_tag_utils.branch_to_maintenance_tuple(branch)
+                        # print(name, 'JJ', junk)
+                        maint_br = junk[0]
+                        if maint_br:
+                            raise yam_exception.YamException(
+                                "Cannot sync %s work module since it is on %s maintenance branch. Giving up."
+                                % (name, maint_br)
+                            )
+                    work_modules.append(name)
+                elif name in all_link_module_names:
+                    # abort if this link module is on a
+                    # maintenance branch
+                    ldata = modules_data["link_modules"][name]
+                    maint_br = ldata[2]
+                    if maint_br:
+                        raise yam_exception.YamException(
+                            "Cannot sync %s link module since it is on %s maintenance branch. Giving up."
+                            % (name, maint_br)
+                        )
+
+                    link_modules.append(name)
+                else:
+                    # check if this is a main trunk module specified on
+                    # the command line
+                    all_wm_names = self.__client.work_module_names(
+                        self.sandbox_root_directory(),
+                        # main=True)
+                        work_module_type=WorkModuleType.MAIN,
+                    )
+                    if name in args.module_name and name in all_wm_names:
+                        # this is a main trunk module specified on the
+                        # command line, so we can sync it
+                        work_modules.append(name)
+                        allow_main = True
+                    else:
+                        raise yam_exception.YamException(
+                            "'{}' is not listed as a module in the YAM.config file".format(name)
+                        )
+
+            # if in baseline mode, build up a dictionary of the module releases to possibly sync up to
+            failed = []
+            from yam import database_reader
+            from yam import configuration_reader
+
+            if args.baseline:
+                # get the module release info for the baseline release
+                baseline_modrels = self._getBaselineModuleInfo(release=args.release)
+
+            # sync up the link modules
+            if link_modules:
+                # print('CCCC')
+                if not args.baseline:
+                    # print('CCCC1')
+                    # not in baseline mode, so sync up to the latest release
+                    if self.__client.update_link_modules(
+                        sandbox_root_directory=self.sandbox_root_directory(),
+                        module_names=link_modules,
+                        to_release=args.release,
+                        release_directory=self.__release_directory,
+                        progress_callback=self.__progress_callback,
+                    ):
+                        modified = True
+                else:
+                    # print('CCCC2', link_modules)
+                    # in baseline mode, so sync up the link modules one at a time
+                    for m in link_modules:
+                        # print('CCCC3', m)
+                        # if the module is in this package release, then
+                        # get the release tag, else leave it empty so
+                        # the latest module release will be used
+                        torelease = baseline_modrels.get(m, "")
+                        if torelease:
+                            print("Syncing %s link module to %s release" % (m, torelease))
+                        else:
+                            print("Syncing %s link module to latest release" % (m))
+                        if self.__client.update_link_modules(
+                            sandbox_root_directory=self.sandbox_root_directory(),
+                            module_names=[m],
+                            to_release=torelease,
+                            release_directory=self.__release_directory,
+                            progress_callback=self.__progress_callback,
+                        ):
+                            modified = True
+
+            # sync up the work modules
+            for m in work_modules:
+                try:
+                    # print('GGG', args.branch)
+                    if not args.baseline:
+                        if args.branch and args.branch != "-":
+                            # verify that the branch id is legal
+                            revision_tag_utils.check_legal_branch_id(args.branch)
+
+                        # not in baseline mode, so the release tag is for the module
+                        torelease = args.release
+                    else:
+                        # get the module release from the baseline_config from the BaselinePkg release
+
+                        # if the module is in this package release, then
+                        # get the release tag, else leave it empty so
+                        # the latest module release will be used
+                        torelease = baseline_modrels.get(m, "")
+
+                    if torelease:
+                        print("Syncing %s work module to %s release" % (m, torelease))
+                    else:
+                        print("Syncing %s work module to its latest release" % (m))
+
+                    if self.__client.sync_module(
+                        module_name=m,
+                        sandbox_root_directory=self.sandbox_root_directory(),
+                        to_release=torelease,
+                        to_branch=args.branch,
+                        allow_main=allow_main,
+                        commit=args.commit,
+                        progress_callback=self.__progress_callback,
+                    ):
+                        modified = True
+                except database_reader.ModuleLookupException as exception:
+                    print(exception, file=sys.stderr)
+                    continue
+                except configuration_reader.ConfigurationError as exception:
+                    print(exception, file=sys.stderr)
+                    continue
+                except yam_exception.YamException as exception:
+                    bold_red = ansi("1;31m")
+                    end = ansi("0m")
+                    print(
+                        bold_red
+                        + ("WARNING!!! Couldn't sync module '{}'. Exception: {}\n" + "Continuing...").format(
+                            m, exception
+                        )
+                        + end,
+                        file=sys.stderr,
+                    )
+                    failed.append(m)
+                    continue
+            if not modified:
+                return
+
+            if work_modules or link_modules:
+                self.__client.relink_modules(
+                    module_names=work_modules + link_modules,
+                    sandbox_directory=self.sandbox_root_directory(),
+                    release_directory=self.__release_directory,
+                )
+
+            # if args.build:
+            #    self._rebuild_work_modules()
+            if args.build and work_modules:
+                self._rebuild(work_modules, sandbox_root_directory=self.sandbox_root_directory(), check_out=False)
+                # print("WARNING!!! You might need to rebuild/update other modules in this sandbox in case the sync has resulted in header file changes.")
+
+            if failed:
+                bold_red = ansi("1;31m")
+                end = ansi("0m")
+                print(bold_red + "WARNING!!! Failed to sync the following work modules:" + end, failed)
+
+    def _rebuild_work_modulesOBSOLETE(self):
+        """Rebuild all work modules."""
+        work_modules = self.__client.work_module_names(sandbox_root_directory=self.sandbox_root_directory())
+
+        if work_modules:
+            self._rebuild(work_modules, sandbox_root_directory=self.sandbox_root_directory(), check_out=False)
+
+    def save_command(self, args):
+        """Release a module."""
+
+        if args.require_bug_id and args.bug_id is None:
+            raise yam_exception.YamException("--bug-id must be specified; " "use empty string if there is no bug ID")
+
+        if not args.create_link_modules or args.to_tagged:
+            args.to_work = True
+
+        with self._lock():
+
+            def release_information_callback(
+                module_name, revision_tag, build_id, site_name, release_note_entry, change_log_entry, diff
+            ):
+                """Email callback."""
+                if build_id:
+                    subject = (
+                        "[{site}] {module}-{tag}-Build{build_id}: ".format(
+                            build_id=build_id, site=site_name, module=module_name, tag=revision_tag
+                        )
+                        + "build release notification"
+                    )
+
+                    first_line = (
+                        "A new build release ("
+                        "{build_id}) has been made for "
+                        "{module}-{tag}.".format(build_id=build_id, module=module_name, tag=revision_tag)
+                    )
+                else:
+                    # if an email tag has been specified, then add it to the subject string
+                    if args.email_tag:
+                        subject_tag = "[%s] " % args.email_tag
+                    else:
+                        subject_tag = ""
+                    subject = (
+                        "[{site}] {module}-{tag}: {subject_tag}".format(
+                            site=site_name, module=module_name, tag=revision_tag, subject_tag=subject_tag
+                        )
+                        + "module release notification"
+                    )
+
+                    first_line = ""
+
+                if args.email_diff_size and diff:
+                    if len(diff) > args.email_diff_size:
+                        diff = "First portion of diff:\n\n" + diff[: args.email_diff_size] + "\n..."
+                    else:
+                        diff = "Diff:\n\n" + diff
+                else:
+                    diff = ""
+
+                command = join_and_wrap_command(sys.argv, prefix="Command:")
+
+                self._send_email(
+                    subject=subject,
+                    body=("pyam {} says...\n".format(__version__))
+                    + "\n\n\n".join(
+                        filter(
+                            len,
+                            [
+                                first_line.strip(),
+                                release_note_entry.strip(),
+                                change_log_entry.strip(),
+                                diff.strip(),
+                                command.strip(),
+                            ],
+                        )
+                    )
+                    + "\n\n",
+                )
+
+            empty_log_filter = self.__empty_log_filter if args.release_notes else lambda x: x
+
+            self.__client.save_modules(
+                module_names=unique_list(args.module_name),
+                sandbox_root_directory=self.sandbox_root_directory(),
+                release_note_message=args.release_note_message,
+                username=args.username,
+                release_directory=self.__release_directory,
+                keep_release=self.__keep_release,
+                changelogs_path=self.__changelogs_path,
+                operating_system_name=self.__operating_system_name,
+                site_name=self.__site_name,
+                host_ip=self.__host_ip,
+                empty_log_filter=empty_log_filter,
+                bug_id=args.bug_id,
+                preferred_build_id=args.build_id,
+                release_information_callback=release_information_callback,
+                progress_callback=self.__progress_callback,
+                check_out_again_after_saving=args.to_work,
+                check_out_tagged=args.to_tagged,
+                check_dangling_links=args.check_dangling_links,
+                check_link_modules=args.check_link_modules,
+                pre_save_hooks=args.pre_save_hooks,
+                build=args.build,
+                mkdiff=args.diffs,
+            )
+
+    def _send_email(self, subject, body):
+        """Send email to configured addresses.
+
+        Print error message, but do not fail, if sending fails.
+
+        """
+        # print('KKKK', self.__email_from_address,  self.__email_to_address)
+        if self.__email_from_address and self.__email_to_address:
+            to_addresses = self.__email_to_address.split(",")
+        else:
+            print(
+                "WARNING: Skipping sending email because both 'email_from_address' and 'email_to_address' need to be defined (eithier in the pyamrc file or on the command line)"
+            )
+            return
+
+        self.__progress_callback("Emailing release information to {}".format(to_addresses))
+
+        try:
+            email_utils.send_email(
+                subject=subject,
+                body=body,
+                from_address=self.__email_from_address,
+                to_addresses=to_addresses,
+                hostname=self.__smtp_host,
+                port=self.__smtp_port,
+            )
+        except email_utils.EmailException as e:
+            print(e, file=sys.stderr)
+
+    def history_command(self, args):
+        """Print the history of a module."""
+        limit = args.limit
+        before = args.before
+        after = args.after
+        ascending = args.ascending
+        if limit is None:
+            print("Please input a positive int value for --limit")
+            return
+        if before is None:
+            print("Please input a datetime value for --before")
+            return
+        if after is None:
+            print("Please input a datetime value for --after")
+            return
+        if before is not True:
+            try:
+                parser.parse(before)
+            except:
+                print("The datetime value for --before is invalid.")
+                return
+        if after is not True:
+            try:
+                parser.parse(after)
+            except:
+                print("The datetime value for --after is invalid.")
+                return
+
+        module_names = unique_list(args.module_name)
+        if len(module_names) == 0:
+            module_names = self.__client.module_names()
+
+        red = ansi("1;31m")
+        end = ansi("0m")
+
+        from yam import database_reader
+
+        try:
+            module_info = self.__client.module_history(
+                module_names=module_names, limit=limit, before=before, after=after, ascending=ascending
+            )
+            for row in module_info:
+                username = row["user"] or "-"
+                datetime_string = row["datetime"] or "-          -"
+
+                first_num_spaces = 46
+                module = " ".join([row["name"], row["tag"]]).ljust(first_num_spaces)
+
+                line = "{module}  {user}  {datetime}".format(
+                    module=module.strip().ljust(first_num_spaces), user=username.ljust(10), datetime=datetime_string
+                )
+                if self.__colorize:
+                    (name, rest) = line.split(" ", 1)
+                    line = red + name + end + " " + rest
+                print(line)
+        except database_reader.ModuleLookupException as exception:
+            print(exception, file=sys.stderr)
+
+    def latest_command(self, args):
+        """Print out latest module information."""
+        module_names = unique_list(args.module_name)
+        if len(module_names) == 0:
+            module_names = self.__client.module_names()
+
+        # see
+        # https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_parameters
+        # for more colors and ansi sequences
+
+        # foreground colors
+        black = ansi("30m")
+        red = ansi("31m")
+        green = ansi("32m")
+        yellow = ansi("33m")
+        blue = ansi("34m")
+        magenta = ansi("35m")
+        cyan = ansi("36m")
+        white = ansi("37m")
+
+        end = ansi("0m")
+        bold = ansi("1m")
+        underline = ansi("4m")
+        bold_underline = ansi("1;4m")
+
+        for n in module_names:
+            from yam import database_reader
+
+            try:
+                module_info = self.__client.latest_module_information(
+                    module_name=n, release=None, release_directory=self.__release_directory
+                )
+            except database_reader.ModuleLookupException as exception:
+                print(exception, file=sys.stderr)
+                continue
+            if module_info["build"]:
+                build_string = " Build" + module_info["build"]
+            else:
+                build_string = "-"
+
+            username = module_info["user"] or "-"
+            datetime_string = module_info["datetime"] or "-          -"
+
+            first_num_spaces = 46
+            module_and_build = (
+                " ".join([n, module_info["tag"]]).ljust(first_num_spaces - len(build_string)) + build_string
+            )
+
+            line = "{module_and_build}  {user}  {datetime}".format(
+                module_and_build=module_and_build.strip().ljust(first_num_spaces),
+                user=username.ljust(10),
+                datetime=datetime_string,
+            )
+
+            if self.__colorize:
+                (name, rest) = line.split(" ", 1)
+                line = (red if module_info["missing"] else green) + name + end + " " + rest
+            print(line)
+
+    def latest_package_command(self, args):
+        """Print out latest package information."""
+        package_names = unique_list(args.package_name)
+        if len(package_names) == 0:
+            package_names = self.__client.package_names()
+
+        green = ansi("32m")
+        end = ansi("0m")
+
+        for name in package_names:
+            from yam import database_reader
+
+            try:
+                tag = self.__client.latest_package_revision_tag(name)
+            except database_reader.ModuleLookupException as exception:
+                print(exception, file=sys.stderr)
+                continue
+
+            if self.__colorize:
+                name = green + name + end
+
+            print(" ".join([name, tag]))
+
+    def obsolete_builds_command(self, args):
+        """Print out names of modules whose builds are obsolete."""
+        obs_mods = self.__client.obsolete_builds(self.__release_directory)
+        for name in obs_mods:
+            if name not in args.exclude:
+                print(name)
+
+    def dependencies_command(self, args):
+        """Print out dependencies of a module."""
+
+        results = self.__client.module_dependencies(args.modules, args.recursive)
+        for d in sorted(results):
+            print(d)
+        return
+
+        if args.recursive:
+            return set(args.modules) | set(
+                itertools.chain(*[_dependencies(m, database_reader.module_dependencies) for m in module_names])
+            )
+
+            outset = set()
+
+            def process(d):
+                if d in outset:
+                    return
+                outset.add(d)
+                deps = self.__client.module_dependencies(d)
+                for d in deps:
+                    process(d)
+
+            process(args.module_name)
+            deps = outset
+        else:
+            for m in args.modules:
+                deps += self.__client.module_dependencies(m, args.recursive)
+
+        for d in sorted(deps):
+            print(d)
+
+    def dependents_command(self, args):
+        """Print out dependents of a module."""
+        results = self.__client.module_dependents(args.modules, args.recursive)
+        for d in sorted(results):
+            print(d)
+        return
+
+        for name in sorted(self.__client.module_dependents(args.module_name)):
+            print(name)
+
+    def util_command(self, args):
+        """Various helper utility functions."""
+        if args.subcmd == "all-modules":
+            # list all the current modules
+            # from pprint import pprint
+            # pprint(self.__client.all_module_packages('MODULE'))
+            # from pprint import pprint
+            fmt = "{:<35} {:<6} {:<9} {:<23} {:<6}"
+            print(fmt.format("Module", "Rels", "Tag", "Date", "db id"))
+            print(fmt.format("------", "----", "---", "----", "-----"))
+            for i in self.__client.all_module_packages("MODULE", args.modpkg_order_field, args.ascending):
+                # name, id, Nreleases, datetime, repository = i
+                # print(i)
+                print(
+                    fmt.format(
+                        i["name"], i["Nreleases"], i["tag"], i["datetime"].strftime("%m/%d/%Y, %H:%M:%S"), i["id"]
+                    ),
+                    end="\n",
+                )
+
+        elif args.subcmd == "all-packages":
+            # list all the current packagesXr 1
+            # from pprint import pprint
+            fmt = "{:<35} {:<6} {:<9} {:<23} {:<6}"
+            print(fmt.format("Package", "Rels", "Tag", "Date", "db id"))
+            print(fmt.format("------_", "----", "---", "----", "-----"))
+            for i in self.__client.all_module_packages("PACKAGE", args.modpkg_order_field, args.ascending):
+                # name, id, Nreleases, datetime, repository = i
+                # print(i)
+                for j in ["build", "maintBranch", "maintNum"]:
+                    if not i[j]:
+                        i[j] = ""
+                print(
+                    fmt.format(
+                        i["name"], i["Nreleases"], i["tag"], i["datetime"].strftime("%m/%d/%Y, %H:%M:%S"), i["id"]
+                    ),
+                    end="\n",
+                )
+
+        elif args.subcmd == "package-release":
+            # list the module releases in a package release
+            assert args.package
+            if not args.release_tag:
+                # get the latest release tag for the package since none
+                # has been specified
+                args.release_tag = self.__client.latest_package_revision_tag(args.package)
+
+            status = self.__client._has_package_relatives(args.package, args.release_tag)
+            if not status:
+                # raise yam_exception.YamException("Unimplemented util subcommand: {subcmd}".format(subcmd=args.subcmd))
+                raise yam_exception.YamException(
+                    "Cannot get module releases info because the relatives info is missing in the database for the {pkg}-{tag} package release".format(
+                        pkg=args.package, tag=args.release_tag
+                    )
+                )
+
+            # print("Not -implemented - module list for this package release")
+            print(
+                "Modules content for the {pkg}-{tag} package release\n".format(pkg=args.package, tag=args.release_tag)
+            )
+            assert args.release_tag
+            fmt = "{:<35} {:<6} {:<9} {:<6} {:<12} {:<8} {:<23} {:<6}"
+            print(fmt.format("Module", "Rels", "Tag", "Build", "MaintBr", "MaintNum", "Date", "db id"))
+            print(fmt.format("------", "----", "---", "---", "---", "---", "----", "-----"))
+            for i in self.__client.package_release_modules(
+                args.package, args.release_tag, args.modpkg_order_field, args.ascending
+            ):
+                # name, id, Nreleases, datetime, repository = i
+                # print(i)
+                for j in ["build", "maintBranch", "maintNum"]:
+                    if not i[j]:
+                        i[j] = ""
+                print(
+                    fmt.format(
+                        i["name"],
+                        i["Nreleases"],
+                        i["tag"],
+                        i["build"],
+                        i["maintBranch"],
+                        i["maintNum"],
+                        i["datetime"].strftime("%m/%d/%Y, %H:%M:%S"),
+                        i["id"],
+                    ),
+                    end="\n",
+                )
+
+        elif args.subcmd == "package-release-relatives":
+            # list the module releases in a package release
+            assert args.package
+            assert args.release_tag
+            status = self.__client.populate_package_relatives(args.package, args.release_tag)
+
+        elif args.subcmd == "fix-package-relatives":
+            # list the module releases in a package release
+            assert not args.package
+            assert not args.release_tag
+            status = self.__client.fix_package_relatives()
+
+        else:
+            raise yam_exception.YamException("Unimplemented util subcommand: {subcmd}".format(subcmd=args.subcmd))
+
+    def diff_command(self, args):
+        """Print the diff, showing the changes since a branch was made."""
+
+        module_names = []
+        if args.from_release and not args.to_release:
+            raise yam_exception.YamException(
+                "Must specify a --to-release value for the non-null %s --from-release value" % args.from_release
+            )
+
+        if args.to_release and not args.from_release:
+            raise yam_exception.YamException(
+                "Must specify a --from-release value for the non-null %s --to-release value" % args.to_release
+            )
+
+        if args.all and args.to_release:
+            raise yam_exception.YamException(
+                "Cannot use --all option together with the --from-release option" % args.from_release
+            )
+
+        if args.module_only and not args.all:
+            raise yam_exception.YamException("--module-only/-m is designed to be used only if --all/-a is enabled.")
+
+        if len(args.module_name) > 1 and args.to_release:
+            raise yam_exception.YamException(
+                "Cannot specify more than module together with the --from-release option" % args.from_release
+            )
+
+        if args.all:
+            module_names = self.__client.work_module_names(
+                self.sandbox_root_directory(),
+                work_module_type=WorkModuleType.BRANCH | WorkModuleType.MAIN,
+                # tagged=False
+            )
+            if not module_names:
+                return
+        elif not args.module_name and self.sandbox_root_directory():
+            # If we are in a module directory of the specified sandbox, then
+            # assume that the user wants the diff of this module.
+            current_directory = os.getcwd()
+            sandbox_directory = os.path.realpath(self.sandbox_root_directory())
+            if current_directory.find(sandbox_directory) == 0:
+                relative_path = os.path.relpath(current_directory, sandbox_directory).split(os.sep)
+                if len(relative_path) > 1 and relative_path[0] == ("src"):
+                    module_names = [relative_path[1]]
+        else:
+            module_names = [normalize_module_name(m) for m in args.module_name]
+
+        if not module_names:
+            raise yam_exception.YamException("This is not a module directory nor was a module specified")
+
+        if args.from_release:
+            print(self.__client.get_releases_diff(module_names[0], args.from_release, args.to_release))
+            """
+            from yam import work_module
+            from_url = work_module.feature_branches_url(
+                module_name=module_names[0],
+                revision_tag=args.from_release,
+                database_reader=self.__client.__database_reader)
+            from_url = work_module.feature_branches_url(
+                module_name=module_names[0],
+                revision_tag=args.to_release,
+                database_reader=self.__client.__database_reader)
+            return self.__client.__revision_control_system.generate_diff(
+                from_url=from_url, to_url=to_url
+            )
+            """
+
+        for name in module_names:
+            try:
+                output = self.__client.diff(module_name=name, sandbox_root_directory=self.sandbox_root_directory())
+            except yam_exception.YamException as e:
+                print(str(e))
+                continue
+            except UnicodeError:
+                print("Could not generate diff due to file encoding problem")
+                continue
+
+            if self.__colorize and sys.stdout.isatty():
+                output = colorize_diff(output)
+
+            # pysvn returns byte strings on Python 2 so we must
+            # manually encode to Unicode. We assume UTF-8 and replace
+            # non-UTF-8 characters with markers like '\ufffd'.
+            try:
+                output = output.decode("utf-8", errors="replace")
+            except AttributeError:
+                pass
+
+            if args.module_only and output:
+                sys.stdout.write(name + "\n")
+            else:
+                sys.stdout.write(output)
+
+    def config_command(self, args):
+        """Modify the sandbox configuration file."""
+        from yam import client
+
+        # disable the need for a sandbox
+        self.__use_lock = False
+        if args.all_to_link and args.branch is not None:
+            raise ValueError("The --branch option can only be used with the --all-to-work option")
+
+        # get the work & link modules to process
+        if not args.current_modules:
+            all_modules = self.__client.modules_dictionary(configuration_filename=args.input_file)
+            work_modules = all_modules["work_modules"]
+            link_modules = all_modules["link_modules"]
+
+            # verify that all the work module names are for valid modules
+            for m in work_modules:
+                # verify that this is a valid module name
+                self.__client.latest_module_information_as_of(module_name=m)
+
+            # verify that all the link module names are for valid modules
+            for m in link_modules:
+                # verify that this is a valid module name
+                self.__client.latest_module_information_as_of(module_name=m)
+        else:
+            work_modules = {}
+            link_modules = {}
+            curr_module_names = self.__client.current_modules()
+            # get latest link module for all these modules
+            for module_name in sorted(curr_module_names):
+                info = self.__client.latest_module_information(
+                    module_name=module_name, release=None, release_directory=self.__release_directory
+                )
+                revision_tag = info["tag"]
+                build_id = info["build"]
+                # print('LLL', module_name, revision_tag, build_id)
+                link_modules[module_name] = (revision_tag, build_id, None, None)
+                all_modules = {"link_modules": link_modules, "work_modules": {}}
+                work_modules = {}
+
+        """
+        #with self._lock():
+        all_modules = self.__client.modules_dictionary(
+            configuration_filename=args.input_file)
+        # config = read_sandbox_configuration(args.input_file)
+        work_modules = all_modules['work_modules']
+        link_modules = all_modules['link_modules']
+        """
+
+        if args.recall_from:
+            # We're recalling an old YAM.config. This operation is not
+            # connected to any particular sandbox
+            from yam.concrete_configuration_reader import read_sandbox_configuration
+            from yam.revision_tag_utils import make_linkmodule_description_tuple, make_workmodule_description_tuple
+            from yam.concrete_configuration_writer import write_sandbox_configuration
+            from yam import database_reader
+
+            for module in work_modules:
+                # print("MMMM", module)
+                try:
+                    r = self.__client.latest_module_information_as_of(module_name=module, date=args.recall_from[0])
+                    work_modules[module] = make_workmodule_description_tuple(
+                        r["tag"],
+                        # normally this would be
+                        # r['user'], but 'pyam config
+                        # --recall-from' shouldn't
+                        # produce branch suffixes, so
+                        # I leave this blank
+                        None,
+                        r["build"],
+                    )
+                except database_reader.ModuleLookupException:
+                    work_modules[module] = make_tuple("NOTFOUND", "NOTFOUND", "NOTFOUND")
+
+            for module in link_modules:
+                # print("MMMM", module)
+                try:
+                    r = self.__client.latest_module_information_as_of(module, args.recall_from[0])
+                    link_modules[module] = make_linkmodule_description_tuple(
+                        r["tag"],
+                        # normally this would be
+                        # r['user'], but 'pyam config
+                        # --recall-from' shouldn't
+                        # produce branch suffixes, so
+                        # I leave this blank
+                        None,
+                        r["build"],
+                        None,
+                        None,
+                    )
+                except database_reader.ModuleLookupException:
+                    link_modules[module] = make_tuple("NOTFOUND", "NOTFOUND", "NOTFOUND", None, None)
+
+            """
+            write_sandbox_configuration(args.output_file,
+                                        work_modules, link_modules,
+                                        None)
+            return
+            """
+
+            ####sandbox_root_directory = self.sandbox_root_directory()
+
+        def _link_to_work_modules(all_mods, branch):
+            # convert link modules to work modules
+            module_list = sorted(all_mods["link_modules"])
+            # print('MMM', module_list)
+            if branch == "main":
+                release = "main"
+                branch = None
+            else:
+                release = None
+                branch = args.branch
+
+            wms = all_mods["work_modules"]
+            for module_name in module_list:
+                try:
+                    wms.update(
+                        self.__client.convert_to_work_module(
+                            module_name=module_name,
+                            release=release,
+                            branch=branch,
+                            sandbox_root_directory=None,
+                            module_dictionary=all_mods,
+                            work_module_type=WorkModuleType.BRANCH,
+                            #                         tagged_branch=False,
+                            #                         main_branch=False,
+                            progress_callback=self.__progress_callback,
+                        )
+                    )
+                    # modified.append(module_name)
+                except client.MissingModuleException as exception:
+                    print(exception, file=sys.stderr)
+
+            return wms
+
+        # work_modules = {}
+        # link_modules = {}
+        if args.all_to_link or args.to_link:
+            # update the list of work and link modules
+            # link_modules = {}
+            # convert work modules to link modules
+            if args.all_to_link:
+                module_list = sorted(all_modules["work_modules"])
+            elif args.to_link:
+                module_list = args.to_link
+                # verify the list of modules specified are work modules
+                for m in module_list:
+                    if m not in work_modules:
+                        raise ValueError("'{module}' is not a work module in the input config file".format(module=m))
+
+            # convert these work modules into link modules
+            for module_name in module_list:
+                try:
+                    link_modules.update(
+                        self.__client.convert_work_module_to_link_module(
+                            module_name=module_name,
+                            sandbox_root_directory=None,
+                            module_dictionary=all_modules,
+                            release_directory=self.__release_directory,
+                            progress_callback=self.__progress_callback,
+                        )
+                    )
+                    # modified.append(module_name)
+                except client.MissingModuleException as exception:
+                    print(exception, file=sys.stderr)
+                del work_modules[module_name]
+
+        elif args.update_links:
+            link_modules = {}
+            # bump up link modules to the latest releases
+            link_modules.update(
+                self.__client.update_link_modules(
+                    sandbox_root_directory=None,
+                    module_dictionary=all_modules,
+                    module_names=[],
+                    backup=False,
+                    release_directory=self.__release_directory,
+                    progress_callback=self.__progress_callback,
+                )
+            )
+
+        # in baseline mode, so pick up module releases from a baseline release
+        if args.baseline:
+            # print('BBB', link_modules)
+            # get the module release info for the baseline release
+            baseline_modrels = self._getBaselineModuleInfo(release=args.release)
+
+            from yam.revision_tag_utils import make_linkmodule_description_tuple, make_workmodule_description_tuple
+
+            # link_modules = {}
+            # assert not work_modules
+            for m in link_modules:
+                # print('CCCC3', m)
+                # if the module is in this package release, then
+                # get the release tag, else leave it empty so
+                # the latest module release will be used
+                torelease = baseline_modrels.get(m, "")
+                if torelease:
+                    print("Updating %s link module to %s release" % (m, torelease))
+                else:
+                    print("Updating %s link module to latest release" % (m))
+
+                # print('LLL', link_modules[m], 'RRR', torelease)
+                link_modules[m] = make_linkmodule_description_tuple(torelease, None, None, None, None)
+
+            for m in work_modules:
+                # print('CCCC3', m)
+                # if the module is in this package release, then
+                # get the release tag, else leave it empty so
+                # the latest module release will be used
+                torelease = baseline_modrels.get(m, "")
+                if torelease:
+                    print("Updating %s work module to %s release" % (m, torelease))
+                else:
+                    print("Updating %s work module to latest release" % (m))
+                # print('JJJ', work_modules[m], 'PPP', torelease)
+                work_modules[m] = (torelease, None)
+
+        if args.all_to_work:
+            work_modules = _link_to_work_modules(
+                {"work_modules": work_modules, "link_modules": link_modules}, args.branch
+            )
+            link_modules = {}
+            """
+            # convert link modules to work modules
+            module_list = sorted(all_modules['link_modules'])
+            # print('MMM', module_list)
+            if args.branch == 'main':
+                release = 'main'
+                branch = None
+            else:
+                release = None
+                branch = args.branch
+
+            for module_name in module_list:
+                try:
+                    work_modules.update(self.__client.convert_to_work_module(
+                        module_name=module_name,
+                        release=release,
+                        branch=branch,
+                        sandbox_root_directory=None,
+                        module_dictionary=all_modules,
+                        tagged_branch=False, main_branch=False,
+                        progress_callback=self.__progress_callback))
+                    #modified.append(module_name)
+                except client.MissingModuleException as exception:
+                    print(exception, file=sys.stderr)
+            """
+
+        # write out the updated YAM.config file
+        self.__client.write_config_file(
+            configuration_filename=args.output_file,
+            module_dictionary={"work_modules": work_modules, "link_modules": link_modules},
+            default_branch=None,
+        )
+
+    def scrap_command(self, args):
+        from yam import client
+
+        # module_list = args.module_name
+        module_list = unique_list(args.module_name)
+
+        modified = []
+        if args.remove:
+            # remove the modules
+            self.__client.remove_modules_from_sandbox(
+                module_list=module_list,
+                sandbox_root_directory=self.sandbox_root_directory(),
+                release_directory=self.__release_directory,
+            )
+            return
+
+        for module_name in module_list:
+            try:
+                print("Scrapping work-module and converting work modules to link modules")
+                # convert to link module
+                self.__client.convert_work_module_to_link_module(
+                    module_name=module_name,
+                    sandbox_root_directory=self.sandbox_root_directory(),
+                    release_directory=self.__release_directory,
+                    progress_callback=self.__progress_callback,
+                )
+                modified.append(module_name)
+                try:
+                    import tempfile, os.path
+
+                    with tempfile.NamedTemporaryFile(mode="r", delete=False) as tmpstr:
+                        print("Appending module directory name in the sandbox with timestamp")
+                        import time
+
+                        time_stamp = time.strftime("__%Y_%m_%d__%H_%M_%S")
+                        orig_file = self.sandbox_root_directory() + "/src/" + module_name
+                        new_file = orig_file + time_stamp + "-" + os.path.basename(tmpstr.name)
+                        # print("LLL", orig_file, new_file)
+                        os.rename(orig_file, new_file)
+                except:
+                    pass
+            except client.MissingModuleException as exception:
+                print(exception, file=sys.stderr)
+
+        # print('modified=', modified)
+        if modified:
+            self.__client.relink_modules(
+                module_names=modified,
+                sandbox_directory=self.sandbox_root_directory(),
+                release_directory=self.__release_directory,
+            )
+            warn_about_removal(modified, self.sandbox_root_directory())
+
+    def relink_command(self, args):
+        """Relink the sandbox."""
+        with self._lock():
+            self.__client.relink_modules(
+                module_names=unique_list(args.module_name),
+                sandbox_directory=self.sandbox_root_directory(),
+                release_directory=self.__release_directory,
+            )
+
+    def test_command(self, args):
+        """Test database and repository access."""
+        self._run_test(test_build_server=args.test_build_server, test_email=args.test_email)
+
+    def _run_test(self, verbose=True, test_build_server=False, test_email=False):
+        """Run connectivity test.
+
+        Don't print on success if quiet is enabled.
+
+        """
+        status = True
+
+        if verbose:
+            print("Database access: ", end="")
+        try:
+            from yam import database
+
+            try:
+                if self.__client.database_date_time():
+                    if verbose:
+                        print("succeeded")
+            except database.ConnectionException as exception:
+                status = False
+                print("failed ({})".format(exception))
+        except KeyboardInterrupt:
+            status = False
+            print("Canceled by user")
+
+        if verbose:
+            print("Default repository access: ", end="")
+        try:
+            if self.__client.test_default_repository_access():
+                if verbose:
+                    print("succeeded")
+            else:
+                status = False
+                print("failed")
+        except KeyboardInterrupt:
+            status = False
+            print("Canceled by user")
+
+        if test_build_server:
+            try:
+                sandbox_root_directory = self.sandbox_root_directory()
+                if verbose:
+                    print("Build server access: ", end="")
+                try:
+                    if self.__client.check_build_server(sandbox_root_directory):
+                        if verbose:
+                            print("succeeded")
+                    else:
+                        status = False
+                        print("failed")
+                except KeyboardInterrupt:
+                    status = False
+                    print("Canceled by user")
+            except yam_exception.YamException:
+                print("Build server testing must be run from a sandbox", file=sys.stderr)
+
+        if test_email:
+            if not self.__email_from_address or not self.__email_to_address:
+                raise yam_exception.YamException("--test-email requires --email-from-address and " "--email-to-address")
+
+            self._send_email(
+                subject="Test",
+                body=("pyam {} says...\n".format(__version__)) + join_and_wrap_command(sys.argv, prefix="Command:"),
+            )
+
+        if not status:
+            raise yam_exception.YamException("The system is not fully setup; " "run 'pyam test' to try again")
+
+    def register_new_module_gitOBSOLETE(self, args):
+        self.__client.register_new_module(
+            module_name=args.module_name,
+            release_directory=self.__release_directory,
+            repository_keyword=args.repository_keyword,
+            use_git=True,
+            progress_callback=self.__progress_callback,
+        )
+
+    def register_new_module(self, args):
+        # Force the user to specify the "--repository-keyword" option if
+        # "--keyword-to-repository_keyword" is used. Note that by default,
+        # self.__keyword_to_repository_dictionary contains the key None.
+        if (args.repository_keyword is not None) and (
+            ("Git" in args.repository_keyword)
+            or ("git" in args.repository_keyword)
+            or (args.repository_keyword in ["DLabSrh"])
+        ):
+            vcs_type = "git"
+        else:
+            vcs_type = "svn"
+
+        if vcs_type == "svn":
+            if self.__keyword_to_repository_dictionary and list(self.__keyword_to_repository_dictionary) != [None]:
+                if not args.repository_keyword:
+                    raise yam_exception.YamException(
+                        "Repository keyword must be specified with "
+                        '"--repository-keyword" flag; it should be one of the '
+                        "following {all_keywords}".format(all_keywords=list(self.__keyword_to_repository_dictionary))
+                    )
+
+                if args.repository_keyword not in self.__keyword_to_repository_dictionary:
+                    raise yam_exception.YamException(
+                        "Repository keyword "
+                        + "'{keyword}' is not in {all_keywords}".format(
+                            keyword=args.repository_keyword, all_keywords=list(self.__keyword_to_repository_dictionary)
+                        )
+                    )
+
+        # self.__client.register_new_module(
+        self.__client.register_new_module(
+            module_name=args.module_name,
+            release_directory=self.__release_directory,
+            repository_keyword=args.repository_keyword,
+            vcs_type=vcs_type,
+            progress_callback=self.__progress_callback,
+        )
+
+    def register_new_module_command(self, args):
+        """Register a new module.
+
+        The module is registered against with the database and revision
+        control system.
+
+        The default is to use svn, but the --use_git flag lets you use git instead.
+        """
+        self.register_new_module(args)
+        """
+        if args.repository_keyword == "git":
+            self.register_new_module_git(args)
+        else:
+            #print("USING SVN")
+            self.register_new_module_svn(args)
+        """
+
+    def register_new_package_command(self, args):
+        """Register a new package.
+
+        The package gets registered with the database and revision
+        control system.
+
+        """
+
+        if args.baseline:
+            # verify that there the baseline package does not exist if using the --baseline option
+            if self._baselinePkgExists():
+                raise yam_exception.YamException("The '{}' baseline package aready exists.".format(baseline_pkg))
+
+            # the package name should not be speified for the baseline mode
+            if args.package_name:
+                raise yam_exception.YamException(
+                    "Cannot specify a package name together with the --baseline option. The '{}' package is implied.".format(
+                        baseline_pkg
+                    )
+                )
+
+            args.package_name = baseline_pkg
+
+            # in baseline model the modules list should not be specified
+            # since it is automatically set to just the SiteDefs module
+            if args.modules:
+                raise yam_exception.YamException(
+                    "Do not specify the modules with the --baseline option. The 'SiteDefs' module will be the only module in the stub definition of the {} baseline package.".format(
+                        baseline_pkg
+                    )
+                )
+
+            args.modules = ["SiteDefs"]
+
+        def release_information_callback(package_name, revision_tag, release_note_message):
+            """Email callback."""
+            subject = (
+                "[{site}] {package}-{tag}: ".format(site=self.__site_name, package=package_name, tag=revision_tag)
+                + "package release notification"
+            )
+
+            first_line = ""
+
+            command = join_and_wrap_command(sys.argv, prefix="Command:")
+
+            self._send_email(
+                subject=subject,
+                body=("pyam {} says...\n".format(__version__))
+                + "\n\n\n".join(filter(len, [first_line.strip(), release_note_message.strip(), command.strip()]))
+                + "\n\n",
+            )
+
+        # in non-strict mode, add SiteDefs to the list of modules
+        sitedefs = []
+        if not args.strict:
+            sitedefs = ["SiteDefs"]
+
+        self.__client.register_new_package(
+            package_name=args.package_name,
+            repository_keyword=None,
+            modules=unique_list(sitedefs + args.modules if args.modules else []),
+            release_directory=self.__release_directory,
+            username=args.username,
+            release_information_callback=release_information_callback,
+            progress_callback=self.__progress_callback,
+        )
+
+    def unregister_module_command(self, args):
+        """Unregister a module."""
+        if not args.undo:
+            self.__confirmation_callback("Remove '{}' from database?".format(args.module_name))
+
+        self.__client.unregister_module(args.module_name, undo=args.undo)
+
+    def unregister_package_command(self, args):
+        """Unregister a package."""
+        self.__confirmation_callback("Remove '{package}' from database?".format(package=args.package_name))
+
+        self.__client.unregister_package(args.package_name)
+
+    def save_package_command(self, args):
+        """Save a package."""
+
+        def release_information_callback(package_name, revision_tag, release_note_message):
+            """Email callback."""
+            subject = (
+                "[{site}] {package}-{tag}: ".format(site=self.__site_name, package=package_name, tag=revision_tag)
+                + "package release notification"
+            )
+
+            first_line = ""
+
+            command = join_and_wrap_command(sys.argv, prefix="Command:")
+
+            self._send_email(
+                subject=subject,
+                body=("pyam {} says...\n".format(__version__))
+                + "\n\n\n".join(filter(len, [first_line.strip(), release_note_message.strip(), command.strip()]))
+                + "\n\n",
+            )
+
+        # verify that there the baseline package exists if using the --baseline option
+        if args.baseline:
+            if not self._baselinePkgExists():
+                raise yam_exception.YamException(
+                    "The '{}' baseline package must exist to use the --baseline option".format(baseline_pkg)
+                )
+
+            if args.package_name:
+                raise yam_exception.YamException(
+                    "Must not specify a package name when using the --baseline option. The '{}' package is implied.".format(
+                        baseline_pkg
+                    )
+                )
+
+            # use the baseline package as the release package
+            args.package_name = baseline_pkg
+
+        if not args.package_name:
+            raise yam_exception.YamException("A package name must be specified without the --baseline option. ")
+
+        # This is needed because we want to force the user explicitly say
+        # whether they want "--latest-modules" or "--no-latest-modules".
+        """
+        if args.no_latest_modules:
+            args.latest_modules = False
+        else:
+            assert args.latest_modules
+        """
+
+        # The BaselinePkg is a special one that is used for tracking
+        # basline releases across a large family of modules that may
+        # include modules from multiple different packages
+        if args.package_name == baseline_pkg and not args.config_file:
+            raise ValueError("A config file must be specified when creating a 'baseline' release")
+
+        self.__client.save_package(
+            package_name=args.package_name,
+            release_configuration_filename=args.config_file,
+            # use_latest_modules=args.latest_modules,
+            release_directory=self.__release_directory,
+            changelogs_path=self.__changelogs_path,
+            username=args.username,
+            release_note_message=args.release_note_message,
+            empty_log_filter=self.__empty_log_filter,
+            revision_tag=args.revision_tag,
+            release_information_callback=release_information_callback,
+            progress_callback=self.__progress_callback,
+        )
+
+    def initialize_command(self, args):
+        """Initialize the repositories and database."""
+        # Make sure required options are set.
+        if not self.__operating_system_name:
+            raise yam_exception.YamException("--operating-system must be set")
+
+        if not args.release_directory:
+            raise yam_exception.YamException("--release-directory must be set")
+
+        # Only initialize if database and repository are working. Otherwise we
+        # may end up in some limbo state.
+        self._run_test(verbose=False)
+
+        for repository_url in [args.default_repository_url] + list(self.__keyword_to_repository_dictionary.values()):
+            from yam import revision_control_system
+
+            try:
+                self.__client.initialize_module_repository(repository_url)
+            except revision_control_system.DirectoryAlreadyExists as exception:
+                print(exception, file=sys.stderr)
+
+        # Packages live in the default repository only.
+        try:
+            self.__client.initialize_package_repository(
+                url=args.default_repository_url, release_directory=args.release_directory
+            )
+        except revision_control_system.DirectoryAlreadyExists as exception:
+            print(exception, file=sys.stderr)
+
+        try:
+            self.__client.initialize_release_directory(args.release_directory)
+        except OSError as exception:
+            print(exception, file=sys.stderr)
+
+        from yam import database_writer
+
+        try:
+            self.__client.initialize_database()
+        except database_writer.DatabaseAlreadyInitializedException as e:
+            print(e, file=sys.stderr)
+
+        try:
+            self.__client.initialize_build_system(
+                build_module_name="SiteDefs",
+                release_directory=args.release_directory,
+                username="",
+                operating_system_name=self.__operating_system_name,
+                site_name=self.__site_name,
+                host_ip=self.__host_ip,
+                progress_callback=self.__progress_callback,
+            )
+        except yam_exception.YamException as exception:
+            print(exception, file=sys.stderr)
+
+    def status_command(self, args):
+        """Print sandbox status."""
+        out_of_date_module_names = self.__client.out_of_date_link_modules(
+            os.path.join(self.sandbox_root_directory(), "YAM.config"), release_directory=self.__release_directory
+        )
+
+        if out_of_date_module_names:
+            print("Out-of-date link modules:")
+            for name in out_of_date_module_names:
+                print("    " + name)
+
+        out_of_date_module_names = self.__client.out_of_date_work_modules(
+            os.path.join(self.sandbox_root_directory(), "YAM.config"), release_directory=self.__release_directory
+        )
+
+        if out_of_date_module_names:
+            print("Out-of-date work modules:")
+            for name in out_of_date_module_names:
+                print("    " + name)
+
+        vals = list(self._modified_work_modules_and_errors(args.quiet))
+        (modified_work_module_names, work_errors) = vals
+
+        if modified_work_module_names:
+            print("Modified work modules:")
+            for name in modified_work_module_names:
+                print("    " + name)
+
+        vals = list(self._uncommitted_work_modules_and_errors(args.quiet))
+        (uncommitted_work_module_names, uncommitted_errors) = vals
+
+        if uncommitted_work_module_names:
+            print("Work modules with uncommitted files:")
+            for name in uncommitted_work_module_names:
+                print("    " + name)
+
+        errors = work_errors + uncommitted_errors
+        if errors:
+            print("Errors:")
+            for module, error in errors:
+                print("    {}: {}".format(module, error))
+
+    def dbutil_command(self, args):
+        """
+        Utility for the database. Usage examples:
+
+           pyam dbutil add-release -m Dshell++ -r R4-23f -u foouser
+
+        """
+        if args.subcmd == "add-release":
+            self.__client.dbutil_add_release(
+                module=args.module,
+                release=args.revision_tag,
+                username=args.username,
+                release_directory=self.__release_directory,
+            )
+        else:
+            raise yam_exception.YamException("Unimplemented dbutil subcommand: {subcmd}".format(subcmd=args.subcmd))
+
+    def _modified_work_modules_and_errors(self, quiet):
+        """Return modified work module names and errors."""
+
+        result = []
+        errors = []
+
+        root = self.sandbox_root_directory()
+        for name in self.__client.work_module_names(root):
+            if not quiet:
+                print(PROGRESS_PREFIX + "Checking {}".format(name))
+            try:
+                if self.__client.has_modifications(module_name=name, sandbox_root_directory=root):
+                    result.append(name)
+            except yam_exception.YamException as exception:
+                errors.append((name, str(exception)))
+
+        return (result, errors)
+
+    def _uncommitted_work_modules_and_errors(self, quiet):
+        """Return uncommitted work module names and errors."""
+
+        result = []
+        errors = []
+
+        root = self.sandbox_root_directory()
+        for name in self.__client.work_module_names(root):
+            if not quiet:
+                print(PROGRESS_PREFIX + "Checking {}".format(name))
+            try:
+                if self.__client.uncommitted_files(module_name=name, sandbox_root_directory=root):
+                    result.append(name)
+            except yam_exception.YamException as exception:
+                errors.append((name, str(exception)))
+
+        return (result, errors)
+
+    def sandbox_root_directory(self):
+        """Return the path to the sandbox.
+
+        An YamException will be raised if the sandbox was not specified
+        by the user or if the user is not in a sandbox.
+
+        """
+        if self.__sandbox_root_directory:
+            if os.path.exists(self.__sandbox_root_directory):
+                if os.path.isdir(self.__sandbox_root_directory):
+                    return self.__sandbox_root_directory
+                else:
+                    raise yam_exception.YamException(
+                        "Specified sandbox directory "
+                        + "'{d}' is not a directory".format(d=self.__sandbox_root_directory)
+                    )
+            else:
+                raise yam_exception.YamException(
+                    "Specified sandbox directory " + "'{d}' does not exist".format(d=self.__sandbox_root_directory)
+                )
+        else:
+            raise yam_exception.YamException("This command needs to be issued from within a sandbox")
+
+    @contextlib.contextmanager
+    def _lock(self):
+        """Acquire lock on sandbox."""
+        if self.__use_lock:
+            lock_filename = os.path.join(self.sandbox_root_directory(), "lock")
+
+            with lock(lock_filename):
+                yield
+        else:
+            yield
+
+
+def colorize_diff(text):
+    """Return a colorized version of the diff text.
+
+    The text is colorized using ANSI escape sequences. This should not
+    be used when outputting to dumb terminals and files.
+
+    """
+
+    def highlight_bad_whitespace(line):
+        """Highlight trailing whitespace in red."""
+        red_background = ansi("41m")
+        end = ansi("0m")
+
+        line_no_trailing_space = line.rstrip()
+        trailing_space = line.replace(line_no_trailing_space, "")
+
+        if trailing_space:
+            if not line_no_trailing_space:
+                # First trailing whitespace character is part of diff.
+                offset = 1
+                line_no_trailing_space = trailing_space[:offset]
+                trailing_space = trailing_space[offset:]
+
+            return line_no_trailing_space + red_background + trailing_space + end
+        else:
+            return line
+
+    def color_line(line):
+        """Color a line of text."""
+        red = ansi("31m")
+        green = ansi("32m")
+        blue = ansi("36m")
+        bold = ansi("1m")
+        end = ansi("0m")
+
+        if line.startswith("Index") or line.startswith("="):
+            return bold + line + end
+        elif line.startswith("+++"):
+            return bold + green + line + end
+        elif line.startswith("---"):
+            return bold + red + line + end
+        elif line.startswith("+"):
+            return green + line + end
+        elif line.startswith("-"):
+            return red + line + end
+        elif line.startswith("@"):
+            return blue + line + end
+        else:
+            return line
+
+    return "\n".join([color_line(highlight_bad_whitespace(l)) for l in text.split("\n")])
+
+
+def warn_about_removal(modules, sandbox_root_directory):
+    """Warn about modules needing to be removed."""
+    # print('PPPP1', modules)
+    message = "  \n".join(name for name in modules if os.path.exists(os.path.join(sandbox_root_directory, "src", name)))
+    # print('PPPP0', message)
+    if message:
+        # print('PPPP')
+        print(
+            "Please remove the archival module directories from the "
+            "'src' directory if no longer necessary:\n{}".format(message),
+            file=sys.stderr,
+        )
+
+
+def colored_error(text):
+    """Return red-colored text."""
+    red = ansi("31m")
+    end = ansi("0m")
+    return red + text + end
+
+
+def add_set_up_subparser(subparsers, command_interpreter):
+    """'setup' sub-command."""
+    parser = subparsers.add_parser("setup", help="set up a sandbox")
+    parser.add_argument("names", nargs="+")
+
+    parser.add_argument("--directory", "-d", required=False, help="sandbox directory name")
+
+    parser.add_argument(
+        "--revision-tag", "-r", help="specify to check out a previously released package with the " "given revision tag"
+    )
+
+    parser.add_argument(
+        "--modules",
+        action="store_true",
+        help="interpret the argument as a list of modules instead of a " "package name",
+    )
+
+    parser.add_argument(
+        "--configuration", "-c", action="store_true", help="interpret the argument as a configuration filename to copy"
+    )
+
+    parser.add_argument(
+        "--edit", "-e", action="store_true", help="edit configuration in text editor before checking out"
+    )
+
+    parser.add_argument("--no-build", dest="build", action="store_false", help="do not build the checked out modules")
+
+    parser.add_argument("--no-checkout", dest="checkout", action="store_false", help="do not check out modules")
+
+    mutually_exclusive_group = parser.add_mutually_exclusive_group()
+
+    mutually_exclusive_group.add_argument(
+        "--work-modules", "-w", action="store_true", help="check everything out as work modules on a unique branch"
+    )
+
+    mutually_exclusive_group.add_argument(
+        "--main-work-modules", "-m", action="store_true", help="check out work modules on the main branch"
+    )
+
+    mutually_exclusive_group.add_argument(
+        "--tagged-work-modules",
+        "-t",
+        action="store_true",
+        help="check out work modules on the latest (read-only) tagged branch",
+    )
+
+    parser.set_defaults(func=command_interpreter.setup_command)
+
+
+def add_check_out_subparser(subparsers, command_interpreter):
+    """'checkout' sub-command."""
+    parser = subparsers.add_parser(
+        "checkout",
+        help="check out a link module as a work module and build it.  See Q&A https://dartslab.jpl.nasa.gov/qa/1534/ for examples.",
+    )
+
+    parser.add_argument("module_name", nargs="+", default=None)
+
+    parser.add_argument(
+        "--dependencies", action="store_true", help="Add any modules the specified modules depend on to the sandbox"
+    )
+    parser.add_argument("--link", action="store_true", help="check out module as link module")
+
+    parser.add_argument("--no-build", dest="build", action="store_false", help="do not build the checked out module")
+
+    parser.add_argument(
+        "--release",
+        required=False,
+        default=None,
+        help="""
+Which release to check-out. We'll make a new branch if no --branch is
+given. If '--branch -', then we check out a release tag version. If --release
+is passed, only a single module should be given on the commandline. If
+'--release main' means we're checking out the trunk so no --branch should be
+given""",
+    )
+
+    parser.add_argument(
+        "--branch",
+        required=False,
+        default=None,
+        help="""
+Which branch to check-out. If --release is given, we'll check out the existing
+branch, or create one if it doesn't exist. Otherwise we'll use the latest
+release.""",
+    )
+
+    parser.add_argument(
+        "--maintenance",
+        required=False,
+        default=None,
+        help="""
+Which branch  to check-out. If  --maintainance is  given, we'll check  out the
+maintenance branch.""",
+    )
+
+    parser.set_defaults(func=command_interpreter.checkout_command)
+
+
+def add_rebuild_subparser(subparsers, command_interpreter):
+    """'rebuild' sub-command."""
+    parser = subparsers.add_parser("rebuild", help="(re)build a work module")
+
+    parser.add_argument("module_name", nargs="*", default=None)
+
+    parser.add_argument("--no-build", dest="build", action="store_false", help="do not build the checked out modules")
+
+    parser.set_defaults(func=command_interpreter.rebuild_command)
+
+
+def add_save_subparser(subparsers, command_interpreter):
+    """ "save" sub-command."""
+    parser = subparsers.add_parser("save", help="release a module")
+    parser.add_argument("module_name", nargs="+")
+
+    default_username = getpass.getuser()
+    parser.add_argument(
+        "--username",
+        required=False,
+        help="username to enter into database (default: {user})".format(user=default_username),
+        default=default_username,
+    )
+
+    parser.add_argument("--release-note-message", "-m", required=False, default=None, help="release note message")
+    parser.add_argument("--bug-id", required=False, help="bug ID")
+    parser.add_argument(
+        "--build-id", required=False, help="preferred build ID; " "only used if we end up doing a build release"
+    )
+
+    parser.add_argument("--email-tag", required=False, help="string to insert into the notification email subject line")
+
+    parser.add_argument(
+        "--to-work", "-w", action="store_true", help="re-check out the source code again after completion of save"
+    )
+
+    parser.add_argument(
+        "--to-tagged",
+        "-t",
+        action="store_true",
+        help="re-check out the source code again after completion of save " "the latest (read-only) tagged branch",
+    )
+
+    parser.add_argument(
+        "--no-check-dangling-links",
+        dest="check_dangling_links",
+        action="store_false",
+        default=True,
+        help="do not check for dangling symbolic links",
+    )
+
+    parser.add_argument(
+        "--no-diffs",
+        dest="diffs",
+        action="store_false",
+        default=True,
+        help="do not generate diffs for changes for inclusion in the emai message",
+    )
+
+    parser.add_argument(
+        "--no-check-link-modules",
+        dest="check_link_modules",
+        action="store_false",
+        default=True,
+        help="do not check for out-of-date link modules",
+    )
+
+    parser.add_argument(
+        "--no-pre-save-hooks", action="store_false", dest="pre_save_hooks", help="do not execute pre-save hooks"
+    )
+
+    parser.add_argument("--no-build", dest="build", action="store_false", help="do not build anything as a result")
+
+    parser.set_defaults(func=command_interpreter.save_command)
+
+
+def add_history_subparser(subparsers, command_interpreter):
+    """'history' sub-command."""
+    parser = subparsers.add_parser("history", help="print the history of a module")
+
+    def check_positive(value):
+        ivalue = int(value)
+        if ivalue <= 0 or ivalue is None:
+            raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
+        return ivalue
+
+    parser.add_argument("--limit", "-l", type=check_positive, help="number of rows returned", nargs="?", default=10)
+
+    def check_datetime(value):
+        datetime = re.search(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$", value)
+        if not datetime:
+            raise argparse.ArgumentTypeError(
+                "%s is an invalid datetime value" % value + '. Must be of the format "XXXX-XX-XX XX:XX:XX"'
+            )
+        return value
+
+    parser.add_argument(
+        "--before",
+        "-b",
+        type=check_datetime,
+        help="the latest point in time in which " "the history is searched",
+        nargs="?",
+        default=True,
+    )
+    parser.add_argument(
+        "--after",
+        "-a",
+        type=check_datetime,
+        help="the earliest point in time in which " "the history is searched",
+        nargs="?",
+        default=True,
+    )
+    parser.add_argument("--ascending", "-asc", help="show in ascending order", action="store_true")
+    parser.add_argument("module_name", nargs="*", default=None)
+    parser.set_defaults(func=command_interpreter.history_command)
+
+
+def add_latest_subparser(subparsers, command_interpreter):
+    """'latest' sub-command."""
+    parser = subparsers.add_parser("latest", help="print the latest module version")
+    parser.add_argument("module_name", nargs="*", default=None)
+    parser.set_defaults(func=command_interpreter.latest_command)
+
+
+def add_latest_package_subparser(subparsers, command_interpreter):
+    """'latest-package' sub-command."""
+    parser = subparsers.add_parser("latest-package", help="print the latest package version")
+    parser.add_argument("package_name", nargs="*", default=None)
+    parser.set_defaults(func=command_interpreter.latest_package_command)
+
+
+def add_obsolete_builds_subparser(subparsers, command_interpreter):
+    """'obsolete-builds' sub-command."""
+    parser = subparsers.add_parser("obsolete-builds", help="print the module names whose builds are obsolete")
+
+    parser.add_argument(
+        "--exclude", "-e", nargs="*", default=[], help="Exclude these modules from the returned module list."
+    )
+    # parser.add_argument('--after', '-a', type=check_datetime, help='the earliest point in time in which '
+    #                                                               'the history is searched', nargs='?', default=True)
+
+    parser.set_defaults(func=command_interpreter.obsolete_builds_command)
+
+
+def add_dependencies_subparser(subparsers, command_interpreter):
+    """'dependencies' sub-command."""
+    parser = subparsers.add_parser("dependencies", help="print the build dependencies of the module")
+    parser.add_argument("--recursive", action="store_true", help="Recursively return ALL build deps")
+    # parser.add_argument('module_name')
+    parser.add_argument("modules", nargs="+")
+    parser.set_defaults(func=command_interpreter.dependencies_command)
+
+
+def add_dependents_subparser(subparsers, command_interpreter):
+    """'dependents' sub-command."""
+    parser = subparsers.add_parser("dependents", help="print the build dependents of the module")
+    #    parser.add_argument('module_name')
+    parser.add_argument("--recursive", action="store_true", help="Recursively return ALL build deps")
+    parser.add_argument("modules", nargs="+")
+    parser.set_defaults(func=command_interpreter.dependents_command)
+
+
+def add_util_subparser(subparsers, command_interpreter):
+    """'util sub-command."""
+    parser = subparsers.add_parser("util", help="miscellaneous utility/informational commands")
+    parser.add_argument(
+        "subcmd",
+        help="Utility subcommand:\n"
+        + "\tall-module:  list all current modules;\n"
+        + "\tall-packages:  list all current packages;\n"
+        + "\tfix-package-relatives:  fix all missing pkg release relatives info in the database;\n"
+        + "\tpkg-release:  list modules in the package release;\n"
+        + "\tpkg-release-relatives:  add missing package release relative info to the database;\n",
+        choices=[
+            "all-modules",
+            "all-packages",
+            "fix-package-relatives",
+            "package-release",
+            "package-release-relatives",
+        ],
+    )
+    parser.add_argument(
+        "--modpkg-order-field",
+        "-f",
+        default="name",
+        choices=["name", "nrels", "date"],
+        help="The field to use for sorting the all modules/packages list.",
+    )
+    parser.add_argument(
+        "--ascending",
+        "-a",
+        action="store_true",
+        help="Ascending or descending sort order for the all modules/packages list",
+    )
+    parser.add_argument("--package", "-p", help="Package name.")
+    parser.add_argument("--release-tag", "-r", help="Release tag (eg. R1-23c).")
+    # parser.add_argument('module_name')
+    # parser.add_argument('all-modules', help="List all currently active modules")
+    # parser.add_argument('all-packages', help="List all currently active packages")
+
+    parser.set_defaults(func=command_interpreter.util_command)
+
+
+def add_diff_subparser(subparsers, command_interpreter):
+    """'diff' sub-command."""
+    parser = subparsers.add_parser(
+        "diff", help="print the diff, showing the committed changes since a branch " "was made"
+    )
+    parser.add_argument("module_name", nargs="*")
+    parser.add_argument("--all", "-a", action="store_true", help="show diff of all modules in sandbox")
+    parser.add_argument(
+        "--module-only",
+        "-m",
+        action="store_true",
+        help="Show only the module name if there are differences. (Designed to be used with --all/-a)",
+    )
+    parser.add_argument("--from-release", help="The from release tag (eg. R1-22b) for the diff", default="")
+    parser.add_argument("--to-release", help="The to release tag (eg. R1-22b) for the diff", default="")
+    parser.set_defaults(func=command_interpreter.diff_command)
+
+
+def add_config_subparser(subparsers, command_interpreter):
+    """'config' sub-command."""
+    parser = subparsers.add_parser(
+        "config",
+        help="""
+do various operations on sandbox configuration ('YAM.config') files.
+NOTE: In version 1.21.4, the behavior of this function changed; it no
+longer changes the current sandbox.  Its primary purpose now to to
+create or modify YAM.config files for later use.  To checkout a
+module, use 'pyam checkout'.  To convert a module from a work to a
+link module, use 'pyam scrap'.""",
+    )
+
+    mutually_exclusive_group = parser.add_mutually_exclusive_group()
+
+    parser.add_argument(
+        "--input-file",
+        "-c",
+        default="YAM.config",
+        help="input YAM.config file. If executed in a sandbox, defaults to the YAM.config of the sandbox.",
+    )
+
+    parser.add_argument(
+        "--output-file",
+        "-o",
+        default="YAM.config.out",
+        help="""
+transformed output YAM.config file.  If omitted, the output is written
+to YAM.config.out.  The YAM.config file in the current sandbox is
+never modified!  """,
+    )
+
+    parser.add_argument(
+        "--branch",
+        help="""
+branch to use when converting to work modules. If unspecified, a
+previously unused branch based on user name is used for each module is
+selected. The "-" value is for tagged release modules. The "main"
+value is for main trunk versions.""",
+    )
+
+    parser.add_argument("--all-to-work", action="store_true", help="convert all link modules to work modules")
+
+    #     mutually_exclusive_group.add_argument(
+    #         '--update-links', action='store_true',
+    #         help='update all link modules to the latest versions')
+
+    #     mutually_exclusive_group.add_argument(
+    #         '--to-work', nargs='+',
+    #         help='convert the specified link modules to work modules')
+
+    """
+    mutually_exclusive_group.add_argument(
+        '--all-to-work', action='store_true',
+        help='convert all link modules to work modules')
+    """
+
+    parser.add_argument(
+        "--baseline",
+        dest="baseline",
+        action="store_true",
+        help="Turn on baseline mode to sync to the module releases specified in the %s package release (use the latest baseline release if the release is unspecfied)"
+        % (baseline_pkg),
+    )
+
+    parser.add_argument(
+        "--release",
+        required=False,
+        default=None,
+        help="""With the --baseline option, this option specifies the baseline release whose module releases should be used.""",
+    )
+
+    mutually_exclusive_group.add_argument(
+        "--to-link", nargs="+", help="convert the specified work modules to link modules"
+    )
+    mutually_exclusive_group.add_argument(
+        "--all-to-link", action="store_true", help="convert all work modules to link modules"
+    )
+
+    mutually_exclusive_group.add_argument(
+        "--update-links", action="store_true", help="update all link modules to point to the latest releases"
+    )
+
+    mutually_exclusive_group.add_argument(
+        "--current-modules",
+        action="store_true",
+        help="Create a YAM.config with link modules for the latest releases of all non-obsolete modules",
+    )
+
+    mutually_exclusive_group.add_argument(
+        "--recall-from",
+        nargs=1,
+        help="""
+Read a YAM.config, and output a new YAM.config with module versions
+back-dated to the given date. This command is not tied to any particular
+sandbox. The date is interpreted by dateutil.parser.parse(), so what
+format is whatever it accepts: strings like '2017-01-01 12:30:00' work
+ok. The datetime module has issues, so there's no timezone handling: the input
+string maybe is UTC or maybe is local time. You can specify a timezone
+in the string, but I wouldn't assume it'll do what you expect.""",
+    )
+    parser.set_defaults(func=command_interpreter.config_command)
+
+
+def add_scrap_subparser(subparsers, command_interpreter):
+    """'scrap' sub-command."""
+    parser = subparsers.add_parser(
+        "scrap",
+        help="""
+convert a work module to a link module and apply timestamp to the old work
+module in the sandbox. Remove the module from the sandbox if requested.
+See Q&A https://dartslab.jpl.nasa.gov/qa/1534/ for examples.""",
+    )
+
+    parser.add_argument("module_name", nargs="*", default=None)
+
+    parser.add_argument("--remove", dest="remove", action="store_true", help="remove the module from teh sandbox")
+
+    parser.set_defaults(func=command_interpreter.scrap_command)
+
+
+def add_relink_subparser(subparsers, command_interpreter):
+    """'relink' sub-command."""
+    parser = subparsers.add_parser("relink", help="recreate symbolic links for the modules")
+    parser.add_argument("module_name", nargs="*", default=None)
+    parser.set_defaults(func=command_interpreter.relink_command)
+
+
+def add_sync_subparser(subparsers, command_interpreter):
+    """'sync' sub-command."""
+    parser = subparsers.add_parser(
+        "sync",
+        help="sync up a work module to the latest revision.  See Q&A https://dartslab.jpl.nasa.gov/qa/1536/ for examples.",
+    )
+    parser.add_argument("module_name", nargs="*", default=None)
+    parser.add_argument("--all", "-a", action="store_true", help="sync all modules")
+    parser.add_argument("--all-except", nargs="*", default=None, help="sync all modules except for the specified ones")
+    parser.add_argument("--commit", "-c", action="store_true", help="commit automatically after sync")
+    parser.add_argument("--link-modules", action="store_true", help="sync all link modules")
+    parser.add_argument("--work-modules", action="store_true", help="sync all work modules")
+    parser.add_argument("--tagged-work-modules", "-t", action="store_true", help="sync tagged modules")
+    parser.add_argument("--no-build", dest="build", action="store_false", help="do not build anything as a result")
+    """
+    parser.add_argument('--no-merge', action='store_false',
+                        help='by default the changes on the branch are merged into the trunk commits in the new branch. This flag disables the merge, and hence the new branch only contains content from the new branch release (same output as from "pyam checkout --release <blah>".')
+
+    parser.add_argument('--ignore-uncommitted', action='store_true',
+                        help='by default sync will abort if there are uncommitted files on the original branch (and the --no-merge option is unspecified). This option will disable this check, and will in a sense abandon the uncommitted changes on the branch, but will still merge in the committed changes".')
+    """
+
+    parser.add_argument(
+        "--baseline",
+        dest="baseline",
+        action="store_true",
+        help="Turn on baseline mode to sync to the module releases specified in the %s package release (use the latest baseline release if the release is unspecfied)"
+        % (baseline_pkg),
+    )
+    parser.add_argument(
+        "--release",
+        required=False,
+        default=None,
+        help="""In non-baseline mode, this specifies the module release's branch to sync up to. If not specified, the latest module release is assumed. A new branch is created if the branch does not already exist.  In non-baseline mode only a single module should be given with this option. In baseline mode, this option specifies the baseline release whose module releases should be used for syncing.""",
+    )
+
+    parser.add_argument(
+        "--branch",
+        required=False,
+        default=None,
+        help="""The branch name to use. If not specified, a user name based branch name is used. A new branch will be created if one does not exist already.""",
+    )
+
+    parser.set_defaults(func=command_interpreter.sync_command)
+
+
+def add_test_subparser(subparsers, command_interpreter):
+    """'test' sub-command."""
+    parser = subparsers.add_parser("test", help="test access to the repository and database")
+
+    parser.add_argument(
+        "--test-build-server", action="store_true", help="test build server; " "only relevant if in a sandbox"
+    )
+
+    parser.add_argument("--test-email", action="store_true", help="test email sending capability")
+
+    parser.set_defaults(func=command_interpreter.test_command)
+
+
+def add_register_new_module_subparser(subparsers, command_interpreter):
+    """'register-new-module' sub-command."""
+    parser = subparsers.add_parser("register-new-module", help="register a new module with the repository and database")
+
+    parser.add_argument("module_name")
+
+    # parser.add_argument(
+    #    '--vcs', required=False,
+    #    default="svn",
+    #    help='keyword that corresponds to the repository URL')
+
+    parser.add_argument(
+        "--repository-keyword", required=False, default=None, help="keyword that corresponds to the repository URL"
+    )
+
+    parser.set_defaults(func=command_interpreter.register_new_module_command)
+
+
+def add_register_new_package_subparser(subparsers, command_interpreter):
+    """'register-new-package' sub-command."""
+    parser = subparsers.add_parser(
+        "register-new-package",
+        help="register a new package with the repository and database. NOTE: you MUST specify the package_name BEFORE any --modules",
+    )
+
+    parser.add_argument("package_name")
+    parser.add_argument("--modules", nargs="+")
+    default_username = getpass.getuser()
+    parser.add_argument(
+        "--username",
+        required=False,
+        help="username to enter into database (default: {user})".format(user=default_username),
+        default=default_username,
+    )
+
+    parser.add_argument(
+        "--strict", action="store_true", help="If false, add SiteDefs module to the list of modules for this package"
+    )
+
+    parser.add_argument(
+        "--baseline",
+        dest="baseline",
+        action="store_true",
+        help='Create the "%s" baseline releases package.' % (baseline_pkg),
+    )
+
+    parser.set_defaults(func=command_interpreter.register_new_package_command)
+
+
+def add_unregister_module_subparser(subparsers, command_interpreter):
+    """'unregister-module' sub-command."""
+    parser = subparsers.add_parser("unregister-module", help="unregister a module from the database (for everyone)")
+    parser.add_argument("module_name")
+    parser.add_argument("--undo", action="store_true", help="undo a previous unregistering of a module")
+
+    parser.set_defaults(func=command_interpreter.unregister_module_command)
+
+
+def add_unregister_package_subparser(subparsers, command_interpreter):
+    """'unregister-package' sub-command."""
+    parser = subparsers.add_parser("unregister-package", help="unregister a package from the database (for everyone)")
+    parser.add_argument("package_name")
+
+    parser.set_defaults(func=command_interpreter.unregister_package_command)
+
+
+def add_save_package_subparser(subparsers, command_interpreter):
+    """'save-package' sub-command."""
+    parser = subparsers.add_parser(
+        "save-package",
+        help=""" save a package.  For example, to save the package with
+the latest versions of its modules, do 'pyam save-package MyPkg'.  To
+save a specific configuration of packages, create a YAM.config file and
+do 'pyam save-package MyPkg --config <custom YAM.config file>'.  Use the
+--baseline option Instead of specifying a package to make a baseline
+release. This command no longer requires being run in a sandbox.""",
+    )
+
+    parser.add_argument("package_name", nargs="?", default="")
+    """
+    latest_group = parser.add_mutually_exclusive_group(required=True)
+    latest_group.add_argument(
+        '--latest-modules', dest='latest_modules', action='store_true',
+        help="populate the configuration file ('YAM.config') "
+             'with the latest module versions')
+
+    latest_group.add_argument(
+        '--no-latest-modules', dest='no_latest_modules', action='store_true',
+        help="do not overwrite the configuration file ('YAM.config'); "
+             'use the existing one in the main branch of the repository')
+    """
+
+    parser.add_argument(
+        "--baseline",
+        dest="baseline",
+        action="store_true",
+        help="Turn on baseline mode to save the %s package to make a baseline release" % (baseline_pkg),
+    )
+
+    parser.add_argument(
+        "--config-file",
+        "-c",
+        required=False,
+        help="YAM.config file with link or tagged modules to use (instead of the latest module releases) for the package release ",
+        default="",
+    )
+
+    default_username = getpass.getuser()
+    parser.add_argument(
+        "--username",
+        required=False,
+        help="username to enter into database (default: {user})".format(user=default_username),
+        default=default_username,
+    )
+
+    parser.add_argument("--revision-tag", "-r", required=False, help="force a specific revision tag (e.g. R1-04c)")
+
+    parser.add_argument("--release-note-message", "-m", required=False, default=None, help="release note message")
+
+    parser.set_defaults(func=command_interpreter.save_package_command)
+
+
+def add_initialize_subparser(subparsers, command_interpreter):
+    """'initialize' sub-command."""
+    parser = subparsers.add_parser("initialize", help="initialize pyam system")
+    parser.set_defaults(func=command_interpreter.initialize_command)
+
+
+def add_status_subparser(subparsers, command_interpreter):
+    """'status' sub-command."""
+    parser = subparsers.add_parser("status", help="print status of sandbox state")
+    parser.set_defaults(func=command_interpreter.status_command)
+
+
+def add_dbutil_subparser(subparsers, command_interpreter):
+    """'dbutil' sub-command."""
+    parser = subparsers.add_parser("dbutil", help="carry out database surgery")
+
+    parser.add_argument(
+        "subcmd",
+        help="""
+                             Subcommands supported are:
+                                   add-release - insert missing database entry for a release
+                          """,
+    )
+
+    parser.add_argument("--module", "-m", required=False, help="module name", default="")
+
+    # default_username = getpass.getuser()
+    parser.add_argument("--username", "-u", required=False, help="username to enter into database", default="")
+
+    parser.add_argument("--revision-tag", "-r", required=False, help="revision tag (e.g. R1-04c)")
+
+    parser.set_defaults(func=command_interpreter.dbutil_command)
+
+
+def print_short_help(parser):
+    """Print short help message."""
+    CustomHelpFormatter.print_positional_only = True
+    parser.print_help()
+    CustomHelpFormatter.print_positional_only = False
+
+
+def add_help_subparser(subparsers, parent_parser):
+    """'help' sub-command."""
+    parser = subparsers.add_parser("help", help="show sub-commands")
+    parser.set_defaults(func=lambda _: print_short_help(parent_parser))
+
+
+def find_configuration_filename():
+    """Return the configuration filename if one exists."""
+    # Check environment variables YAM_PROJECT_CONFIG_DIR and YAM_PROJECT. This
+    # behavior is based on that of the old Perl Yam for backward compatibility.
+    # Preferably there would be just one variable to reduce risk of confusion.
+    yam_project_configuration_directory = os.getenv("YAM_PROJECT_CONFIG_DIR")
+    yam_project = os.getenv("YAM_PROJECT")
+    if yam_project_configuration_directory and yam_project:
+        filename = "{directory}/{base}.pyamrc".format(directory=yam_project_configuration_directory, base=yam_project)
+        if os.path.exists(os.path.expanduser(filename)):
+            return os.path.expanduser(filename)
+        else:
+            raise yam_exception.YamException(
+                "Could not find configuration file at '{filename}'".format(filename=filename)
+            )
+    else:
+        return None
+
+
+def normalize_keys(dictionary):
+    """Return copy of the dictionary with keys with leading dashes removed.
+
+    Also replace the rest of the dashes with underscores.
+
+    This converts keys like '--foo-bar' with 'foo_bar'.
+
+    """
+    new_dictionary = {}
+    for key, value in dictionary.items():
+        new_dictionary[key.lstrip("-").replace("-", "_")] = value.strip("'\"")
+    return new_dictionary
+
+
+def read_configuration():
+    """Read configuration from file and return arguments as a dictionary."""
+    if find_configuration_filename():
+        config_parser = SafeConfigParser()
+        try:
+            config_parser.read(find_configuration_filename())
+        except ConfigParserError as error:
+            raise yam_exception.YamException(str(error))
+        return normalize_keys(dict(config_parser.items("pyam")))
+    else:
+        return dict()
+
+
+def default_operating_system_name():
+    """Return the operating system name.
+
+    The value is retrieved from environment variable. If that does not
+    exist we create a name.
+
+    """
+    name = os.getenv("YAM_NATIVE")
+    if name:
+        return name
+    else:
+        release = platform.release()
+
+        redhat_release = "/etc/redhat-release"
+        if os.path.exists(redhat_release):
+            with open(redhat_release, "rb") as f:
+                match = re.search(rb"(\w+) release (\w+)", f.read())
+                release = match.group(1).decode("utf-8") + match.group(2).decode("utf-8")
+
+        return "{machine}-{release}-{system}".format(
+            machine=platform.machine(), release=release, system=platform.system()
+        ).lower()
+
+
+def create_revision_control_system(repository_username, repository_password, quiet, use_merge_info, vcs):
+    """Construct the RevisionControlSystem object."""
+
+    # Use SVNRevisionControlSystem as Yam's RevisionControlSystem.
+    def login_callback(realm, username, may_save):
+        """Query the user for username and password if needed."""
+
+        # if a password is specified, skip up the cached svn password
+        # process
+        if repository_password:
+            return 1, username, repository_password, False
+
+        try:
+            print("Authentication realm: {realm}".format(realm=realm))
+
+            if not username:
+                username = raw_input("Username: ")
+
+                if not username:
+                    return 0, "", "", False
+
+            password = getpass.getpass(prompt="Password for '{user}': ".format(user=username))
+
+            # Only prompt about saving password to disk if SVN indicates that
+            # the password can be saved
+            if may_save:
+                result = ""
+                while result not in ["y", "n"]:
+                    result = raw_input("Store password (unencrypted)? [y/n]: ").lower()
+                save_password = result == "y"
+            else:
+                save_password = False
+
+            return 1, username, password, save_password
+        except (KeyboardInterrupt, EOFError, IOError):
+            print()
+            return 0, "", "", False
+
+    def ssl_callback(trust_dict):
+        """Called when SSL certificate is in question."""
+        # Formatted to match style of SVN command-line client
+        print(
+            """Error validating server certificate for '{realm}'.
+Certificate information:
+ - Hostname: {hostname}
+ - Valid: from {valid_from} until {valid_until}
+ - Issuer: {issuer_dname}
+ - Fingerprint: {finger_print}""".format(
+                realm=trust_dict["realm"],
+                hostname=trust_dict["hostname"],
+                valid_from=trust_dict["valid_from"],
+                valid_until=trust_dict["valid_until"],
+                issuer_dname=trust_dict["issuer_dname"],
+                finger_print=trust_dict["finger_print"],
+            )
+        )
+
+        try:
+            result = ""
+            while result not in ["r", "t", "p"]:
+                result = raw_input("(R)eject, accept (t)emporarily, or accept (p)ermanently? ").lower()
+        except (KeyboardInterrupt, EOFError):
+            print()
+            return False, 0, False
+
+        if result == "p":
+            return True, trust_dict["failures"], True
+
+        if result == "t":
+            return True, trust_dict["failures"], False
+
+        return False, 0, False
+
+    if quiet:
+        progress_callback = None
+    else:
+
+        def progress_callback(current_bytes=-1, print_time_last=None):
+            """Called when SVN is transferring data by an undocumented
+            pysvn.callback_progress callback. current_bytes comes from pysvn.
+            print_time_last is a list containing a single entry for the timestamp of the
+            last print. This needs to be a list because I want to modify it, but python
+            passes scalars by value
+
+            """
+
+            if current_bytes < 0:
+                # done
+                return
+
+            print_time = time.time()
+            if print_time_last[0] is None:
+                print_time_last[0] = print_time
+                msg = "  SVN transferring data: start"
+                yam_log.say(msg)
+                print(msg)
+                return
+
+            # print at most every X seconds
+            if print_time - print_time_last[0] < 5:
+                return
+
+            print_time_last[0] = print_time
+            msg = "  SVN transferring data: " + "{:.1f} MiB".format(current_bytes / 1024.0 / 1024)
+            yam_log.say(msg)
+            print(msg)
+
+        progress_callback = progress_callback
+
+    from yam import svn_revision_control_system
+    from yam import git_revision_control_system
+
+    if vcs == "git":
+        # print("USING GIT VCS")
+        return git_revision_control_system.GITRevisionControlSystem(
+            username=repository_username,
+            login_callback=login_callback,
+            trust_ssl_server_callback=ssl_callback,
+            use_merge_info=use_merge_info,
+            progress_callback=progress_callback,
+        )
+    return svn_revision_control_system.SVNRevisionControlSystem(
+        username=repository_username,
+        login_callback=login_callback,
+        trust_ssl_server_callback=ssl_callback,
+        use_merge_info=use_merge_info,
+        progress_callback=progress_callback,
+    )
+
+
+def create_build_system(native_operating_system, site_name, use_build_server, quiet, jobs):
+    """Create the BuildSystem object."""
+
+    def build_progress_callback(elapsed_time, done, rule):
+        """Print build progress."""
+        if done:
+            return
+
+        if elapsed_time < 0.01:
+            msg = "  Running 'make {}' subprocess: start".format(rule)
+        else:
+            msg = "  Running 'make {}' subprocess: ".format(rule) + "{:.1f} seconds elapsed".format(elapsed_time)
+        yam_log.say(msg)
+        print(msg)
+
+    # Use MakeBuildSystem as Yam's BuildSystem
+    if quiet:
+        progress_callback = None
+    else:
+        progress_callback = build_progress_callback
+
+    from yam import make_build_system
+
+    return make_build_system.MakeBuildSystem(
+        native_operating_system=native_operating_system,
+        site_name=site_name,
+        use_build_server=use_build_server,
+        progress_callback=progress_callback,
+        jobs=jobs,
+    )
+
+
+def create_dummy_build_system():
+    """Return a build system that does nothing."""
+    from yam import build_system
+
+    class DummyBuildSystem(build_system.BuildSystem):
+        """Do nothing."""
+
+        def build(self, module_names, sandbox_directory):
+            """Do nothing."""
+
+        def clean(self, module_names, sandbox_directory):
+            """Do nothing."""
+
+        def make_links(self, module_names, sandbox_directory, release_directory):
+            """Do nothing."""
+
+        def remove_links(self, module_names, sandbox_directory, release_directory):
+            """Do nothing."""
+
+        def create_build_files(
+            self, path, release_directory, operating_system_name, top_level_file_callback=lambda _: None
+        ):
+            """Do nothing."""
+
+        def create_module_files(self, module_name, module_path, top_level_file_callback=lambda _: None):
+            """Do nothing."""
+
+        def build_dependencies(self, module_path, release_directory):
+            """Do nothing."""
+            return dict()
+
+        def check_build_server(self, sandbox_directory):
+            """Do nothing."""
+
+    return DummyBuildSystem()
+
+
+@contextlib.contextmanager
+def client_context(
+    database_connection_string,
+    database_gateway,
+    repository_username,
+    repository_password,
+    default_repository_url,
+    keyword_to_repository_dictionary,
+    quiet,
+    use_merge_info,
+    use_build_server,
+    operating_system_name,
+    site_name,
+    use_build_system,
+    jobs,
+):
+    """Yield a Client instance."""
+    from yam import client
+    from yam import concrete_configuration_reader
+    from yam import concrete_configuration_writer
+    from yam import local_file_system
+    from yam import mysql_database_reader
+    from yam import mysql_database_writer
+    from yam import port_utils
+
+    if not database_connection_string or not database_connection_string.strip():
+        raise yam_exception.YamException(
+            "--database-connection needs to be specified; " "for more information see --help"
+        )
+
+    if "://" in database_connection_string:
+        raise yam_exception.YamException(
+            "Invalid substring '://' in '{s}' ".format(s=database_connection_string)
+            + "used as argument for database connection string"
+        )
+
+    sql_parsed = urlparse("sql://" + database_connection_string)
+
+    if sql_parsed.username:
+        sql_username = sql_parsed.username
+    else:
+        sql_username = ""
+
+    if sql_parsed.password:
+        sql_password = sql_parsed.password
+    else:
+        sql_password = ""
+
+    if sql_parsed.hostname:
+        sql_hostname = sql_parsed.hostname
+    else:
+        raise yam_exception.YamException(
+            '"hostname" needs to be specified in database connection string '
+            "'{s}'".format(s=database_connection_string)
+        )
+
+    try:
+        sql_port = int(sql_parsed.port)
+    except (ValueError, TypeError):
+        raise yam_exception.YamException(
+            '"port" in database connection string '
+            "'{s}' is invalid and should be a port number".format(s=database_connection_string)
+        )
+
+    if sql_parsed.path:
+        sql_database_name = sql_parsed.path.lstrip("/")
+    else:
+        raise yam_exception.YamException(
+            '"database_name" needs to be specified in database '
+            "connection string '{s}'".format(s=database_connection_string)
+        )
+
+    # The SQL database also contains null and "DEFAULT" values in the
+    # repository column (in additional to the keywords).
+    # Don't modify keyword_to_repository_dictionary.
+    combined_dictionary = {None: default_repository_url, "DEFAULT": default_repository_url}
+    combined_dictionary.update(keyword_to_repository_dictionary)
+    del keyword_to_repository_dictionary
+
+    file_system = local_file_system.LocalFileSystem()
+
+    configuration_reader = concrete_configuration_reader.ConcreteConfigurationReader()
+
+    configuration_writer = concrete_configuration_writer.ConcreteConfigurationWriter()
+
+    if use_build_system:
+        build_system = create_build_system(
+            native_operating_system=operating_system_name,
+            site_name=site_name,
+            use_build_server=use_build_server,
+            quiet=quiet,
+            jobs=jobs,
+        )
+    else:
+        build_system = create_dummy_build_system()
+
+    port_forwarding_process = None
+    try:
+        if database_gateway:
+            local_port = port_utils.unused_port()
+
+            port_forwarding_process = port_utils.create_port_forwarding_process(
+                remote_port=sql_port,
+                local_port=local_port,
+                remote_hostname=sql_hostname,
+                gateway_hostname=database_gateway,
+            )
+
+            sql_hostname = "127.0.0.1"
+            sql_port = local_port
+
+        with mysql_database_reader.MySQLDatabaseReader(
+            hostname=sql_hostname,
+            port=sql_port,
+            username=sql_username,
+            password=sql_password,
+            database_name=sql_database_name,
+            keyword_to_repository_dictionary=combined_dictionary,
+        ) as (database_reader):
+
+            with mysql_database_writer.MySQLDatabaseWriter(
+                hostname=sql_hostname,
+                port=sql_port,
+                username=sql_username,
+                password=sql_password,
+                database_name=sql_database_name,
+            ) as database_writer:
+                yield client.Client(
+                    database_reader=database_reader,
+                    database_writer=database_writer,
+                    revision_control_system=None,
+                    # revision_control_system=create_revision_control_system(
+                    #    repository_username=repository_username,
+                    #    repository_password=repository_password,
+                    #    quiet=quiet,
+                    #    use_merge_info=use_merge_info,
+                    #    vcs=vcs),
+                    build_system=build_system,
+                    file_system=file_system,
+                    default_repository_url=default_repository_url,
+                    configuration_reader=configuration_reader,
+                    configuration_writer=configuration_writer,
+                    default_branch=getpass.getuser(),
+                )
+    finally:
+        if port_forwarding_process:
+            port_forwarding_process.kill()
+
+
+def create_parser():
+    """Add the common top-level options."""
+    parser = argparse.ArgumentParser("pyam", description=__doc__, formatter_class=CustomHelpFormatter)
+
+    # User-interface options.
+    user_interface_group = parser.add_argument_group("user-interface options")
+
+    user_interface_group.add_argument(
+        "--quiet",
+        action="store_true",
+        required=False,
+        help="disable progress messages, but errors will still be printed",
+    )
+
+    user_interface_group.add_argument(
+        "--non-interactive",
+        action="store_true",
+        required=False,
+        help="don't bring up a text editor to add to the release notes or " "change log",
+    )
+
+    user_interface_group.add_argument(
+        "--color",
+        choices=["always", "never", "auto"],
+        default="auto",
+        help="color the diff text and certain other output",
+    )
+
+    user_interface_group.add_argument(
+        "--sandbox-format-string",
+        default="%01d",
+        help="format string used as sandbox suffix when path is not " "explicitly specified",
+    )
+
+    user_interface_group.add_argument(
+        "--no-lock",
+        dest="lock",
+        action="store_false",
+        help="allow multiple pyam instances to mutate the same sandbox " "simultaneously; use at your own risk",
+    )
+
+    user_interface_group.add_argument("--require-bug-id", action="store_true", help="always require --bug-id for save")
+
+    user_interface_group.add_argument(
+        "--text-editor",
+        required=False,
+        default=os.getenv("VISUAL", os.getenv("EDITOR", "vi")),
+        help="text editor used for editing log messages, "
+        'which defaults to environment variable "VISUAL" or "EDITOR"',
+    )
+
+    user_interface_group.add_argument(
+        "--no-release-notes",
+        dest="release_notes",
+        action="store_false",
+        help="disable prompt for and creation of release notes",
+    )
+
+    user_interface_group.add_argument(
+        "--no-yam-make-build-system",
+        dest="yam_make_build_system",
+        action="store_false",
+        help="do not use the 'Makefile.yam' build system",
+    )
+
+    user_interface_group.add_argument(
+        "--no-create-link-modules", dest="create_link_modules", action="store_false", help="never create link modules"
+    )
+
+    user_interface_group.add_argument(
+        "--jobs",
+        dest="jobs",
+        default=-1,
+        type=int,
+        help="Parallel make option -j value. If negative, the number of cpus is used ",
+    )
+
+    # Connection options.
+    connectivity_group = parser.add_argument_group("connectivity options")
+
+    # This flag will be removed in the future
+    # connectivity_group.add_argument(
+    #     '--use_git',
+    #     action='store_true',
+    #     required=False,
+    #     help='choose whether to use git instead of the default svn option')
+
+    connectivity_group.add_argument(
+        "--database-connection",
+        required=False,
+        help="database connection information " '"username:password@hostname:port/database_name"',
+    )
+
+    connectivity_group.add_argument(
+        "--database-gateway", required=False, help="tunnel database queries through this ssh server"
+    )
+
+    connectivity_group.add_argument(
+        "--default-repository-url",
+        required=False,
+        default="",
+        help="the default repository that is used if the database doesn't " "specify one",
+    )
+
+    connectivity_group.add_argument(
+        "--repository-version",
+        required=False,
+        default=None,
+        help="specify repository version; only necessary for "
+        "compatibility with old repository versions, which are missing "
+        "features",
+    )
+
+    connectivity_group.add_argument(
+        "--keyword-to-repository-url",
+        required=False,
+        default="",
+        help="keyword to repository URL; " "for example 'keyword1=svn://myurl1, keyword2=svn://myurl2",
+    )
+
+    # Release-information options.
+    release_group = parser.add_argument_group("release-information options")
+
+    release_group.add_argument(
+        "--release-directory",
+        required=False,
+        help="the location where modules are placed after they are saved for use as link modules",
+        default=None,
+    )
+
+    release_group.add_argument(
+        "--no-keep-release",
+        action="store_false",
+        dest="keep_release",
+        help="do not move a saved module's director to the releases directory for use as a link module",
+    )
+
+    release_group.add_argument(
+        "--operating-system",
+        required=False,
+        help="operating system name that is written to database during "
+        "releases; if not specified, defaults to YAM_NATIVE environment "
+        "variable",
+        default=default_operating_system_name(),
+    )
+
+    release_group.add_argument(
+        "--changelogs-path",
+        required=False,
+        help="directory where links to module release ChangeLog, ReleaseNotes etc files should be made for online browsing",
+        default="",
+    )
+
+    host_ip = "unknown"
+    try:
+        host_ip = socket.gethostbyname(socket.gethostname())
+    except socket.error:
+        pass
+    release_group.add_argument(
+        "--host-ip",
+        required=False,
+        help="IP address of host, which is written to the database during " "releases",
+        default=host_ip,
+    )
+
+    site = os.getenv("YAM_SITE")
+    if not site and os.getenv("DTEST_RUNNING"):
+        site = "telerobotics"
+    if site is None:
+        site = ""
+    release_group.add_argument(
+        "--site", required=False, help="name of site, which defaults to environment variable YAM_SITE", default=site
+    )
+
+    release_group.add_argument("--umask", required=False, help="octal umask for newly created files", default=None)
+
+    # Email options.
+    email_group = parser.add_argument_group("email options")
+
+    email_group.add_argument(
+        "--email-server",
+        required=False,
+        help="SMTP server information for sending release notifications " '"hostname:port"',
+    )
+
+    email_group.add_argument(
+        "--email-to-address",
+        required=False,
+        help="if specified, release notifications will be sent to this email " "address",
+    )
+
+    email_group.add_argument(
+        "--email-from-address",
+        required=False,
+        help="the address from which we will send email notifications",
+        default=None,
+    )
+
+    email_group.add_argument(
+        "--email-from-username",
+        required=False,
+        help="sends emails from this username; default to $USER; " "this is an alternative to --email-from-address",
+        default=None,
+    )
+
+    email_group.add_argument(
+        "--email-from-hostname",
+        required=False,
+        help="sends emails from this hostname; default to $HOSTNAME; " "this is an alternative to --email-from-address",
+        default=None,
+    )
+
+    email_group.add_argument(
+        "--email-diff-size",
+        type=int,
+        default=2000,
+        help="show this many characters of the diff in the email release "
+        "information; set to 0 to disable showing diffs in emails",
+    )
+
+    # Set the defaults from file.
+    defaults = read_configuration()
+    parser.set_defaults(**defaults)
+
+    _add_common_options_that_cannot_be_configured_from_file(parser=parser, connectivity_group=connectivity_group)
+
+    return parser
+
+
+def _add_common_options_that_cannot_be_configured_from_file(parser, connectivity_group):
+    """Add common options whose defaults we do not read from file.
+
+    These options are more dynamic or user-specific.
+
+    """
+    connectivity_group.add_argument(
+        "--repository-username",
+        required=False,
+        help="username used for repository authentication, which can be "
+        "specified if the repository username differs from the OS "
+        "username",
+    )
+
+    connectivity_group.add_argument(
+        "--repository-password",
+        required=False,
+        help="password used for repository authentication, which can be "
+        "specified to skip the version control system's password "
+        "caching and lookup process",
+    )
+
+    connectivity_group.add_argument(
+        "--no-build-server", action="store_false", dest="build_server", help="use remote build server"
+    )
+
+    # Define default root directory and add root directory option
+    from yam import file_system_utils
+
+    try:
+        tmp_root_directory = file_system_utils.find_sandbox_root(os.getcwd())
+    except yam_exception.YamException:
+        tmp_root_directory = None
+    parser.add_argument(
+        "--sandbox-root-directory",
+        default=tmp_root_directory,
+        required=False,
+        help="the location of the existing sandbox",
+    )
+
+    from yam import __version__
+
+    parser.add_argument("--version", action="version", version="%(prog)s " + __version__)
+    parser.add_argument(
+        "--no-log", dest="dolog", action="store_false", help="do not write detailed pyam operation logs to disk"
+    )
+    parser.add_argument("--noshowlogname", action="store_true", help="report the log filename to the console")
+
+
+def trigger_compatibility_help():
+    """Check for old yam commands.
+
+    Print the pyam equivalent if available or ask the user to use old
+    yam for now.
+
+    """
+    if len(sys.argv) > 1:
+        sub_command = sys.argv[1]
+
+        obsolete_commands = {
+            "mkmodule": "pyam register-new-module",
+            "mkpackage": "pyam register-new-package",
+            "pkgnewrelease": "pyam save-package",
+        }
+        if sub_command in obsolete_commands:
+            raise yam_exception.YamException(
+                "'{old}' command is obsolete; use '{new}' instead".format(
+                    old=sub_command, new=obsolete_commands[sub_command]
+                )
+            )
+
+
+def parse_keyword_string(input_string):
+    """Parse revision control keyword string.
+
+    The string is of the form,
+
+    'keyword1=svn://myurl1, keyword2=svn://myurl2"
+
+    """
+    dictionary = {}
+    for pair_string in input_string.split(","):
+        if pair_string.strip():
+            key, value = pair_string.split("=")
+            dictionary[key.strip()] = value.strip()
+    return dictionary
+
+
+class CustomHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
+    """Help formatter that can optionally only print positional commands."""
+
+    print_positional_only = False
+
+    def add_usage(self, usage, actions, groups, prefix=None):
+        """Override to optionally only print positional commands."""
+        if not self.print_positional_only:
+            super(CustomHelpFormatter, self).add_usage(usage, actions, groups, prefix)
+
+    def add_argument(self, action):
+        """Override to optionally only print positional commands."""
+        if not self.print_positional_only or not action.option_strings:
+            super(CustomHelpFormatter, self).add_argument(action)
+
+    def _get_help_string(self, action):
+        """Override to only print default if useful.
+
+        Return help string.
+
+        """
+        if action.default in [True, False]:
+            return action.help
+
+        return super(CustomHelpFormatter, self)._get_help_string(action)
+
+
+def raise_keyboard_interrupt(_, __):
+    """Raise interrupt exception."""
+    raise KeyboardInterrupt()
+
+
+def parse_args(parser):
+    """Parse command-line arguments.
+
+    Return argparse.Namespace object.
+
+    """
+    args = parser.parse_args()
+
+    try:
+        args.sandbox_format_string % 0
+    except (TypeError, ValueError):
+        raise yam_exception.YamException("{} is not a valid format string".format(args.sandbox_format_string))
+
+    if (args.email_from_address and args.email_from_username) or (args.email_from_address and args.email_from_hostname):
+        raise yam_exception.YamException(
+            "--email-from-address and " "--email-from-username/--email-from-hostname are mutually " "exclusive"
+        )
+
+    if args.email_from_address:
+        print(
+            "--email-from-address is deprecated; " "use --email-from-username and/or --email-from-hostname instead",
+            file=sys.stderr,
+        )
+    else:
+        args.email_from_address = "{user}@{host}".format(
+            user=args.email_from_username or getpass.getuser(), host=args.email_from_hostname or platform.node()
+        )
+
+    try:
+        if args.umask:
+            args.umask = ast.literal_eval("0o" + args.umask)
+    except SyntaxError:
+        raise yam_exception.YamException("--umask requires an octal argument")
+
+    # Now post-process individual options
+
+    # --color=auto means "colorize if we can", so I try to infer that here. If
+    # --we're on a tty or inside an emacs shell, we can probably interpret ansi
+    # --colors. If we're running from within a cram test, however, skip the
+    # --colors
+    if args.color == "auto":
+        if not os.getenv("CRAMTMP") and ((sys.stdin is not None and sys.stdin.isatty()) or os.getenv("INSIDE_EMACS")):
+            args.color = "always"
+        else:
+            args.color = "never"
+
+    return args
+
+
+def main():
+    """Main entry point to pyam."""
+    # Top level options
+    parser = create_parser()
+
+    # Create command interpreter
+    command_interpreter = CommandInterpreter()
+    subparsers = parser.add_subparsers(help="sub-commands")
+    add_set_up_subparser(subparsers, command_interpreter)
+    add_check_out_subparser(subparsers, command_interpreter)
+    add_rebuild_subparser(subparsers, command_interpreter)
+    add_save_subparser(subparsers, command_interpreter)
+    add_history_subparser(subparsers, command_interpreter)
+    add_latest_subparser(subparsers, command_interpreter)
+    add_latest_package_subparser(subparsers, command_interpreter)
+    add_obsolete_builds_subparser(subparsers, command_interpreter)
+    add_dependencies_subparser(subparsers, command_interpreter)
+    add_dependents_subparser(subparsers, command_interpreter)
+    add_util_subparser(subparsers, command_interpreter)
+    add_diff_subparser(subparsers, command_interpreter)
+    add_config_subparser(subparsers, command_interpreter)
+    add_scrap_subparser(subparsers, command_interpreter)
+    add_relink_subparser(subparsers, command_interpreter)
+    add_sync_subparser(subparsers, command_interpreter)
+    add_test_subparser(subparsers, command_interpreter)
+    add_register_new_module_subparser(subparsers, command_interpreter)
+    add_register_new_package_subparser(subparsers, command_interpreter)
+    add_unregister_module_subparser(subparsers, command_interpreter)
+    add_unregister_package_subparser(subparsers, command_interpreter)
+    add_save_package_subparser(subparsers, command_interpreter)
+    add_initialize_subparser(subparsers, command_interpreter)
+    add_status_subparser(subparsers, command_interpreter)
+    add_dbutil_subparser(subparsers, command_interpreter)
+
+    add_help_subparser(subparsers, parser)
+
+    # Allow tab-completion in bash if argcomplete is available. Do this as
+    # early as possible to minimize completion latency.
+    try:
+        import argcomplete
+
+        # Show sub-commands only by default. Only show options if the user
+        # types in a "-".
+        argcomplete.autocomplete(parser, always_complete_options=False)
+    except ImportError:
+        pass
+
+    # Handle termination gracefully (by treating it the same as a keyboard
+    # interrupt).
+    signal.signal(signal.SIGTERM, raise_keyboard_interrupt)
+    try:
+        signal.signal(signal.SIGPIPE, raise_keyboard_interrupt)
+    except AttributeError:
+        # SIGPIPE is not available on all platforms.
+        pass
+
+    trigger_compatibility_help()
+    args = parse_args(parser)
+
+    # We have args, so now I know if I should be logging and how I should be
+    # logging. All logging init happens here
+    subcmd = None
+    try:
+        subcmd = args.func.__name__
+        if re.match(".*_command$", subcmd):
+            subcmd = subcmd.replace("_command", "")
+            subcmd = subcmd.replace("_", "-")
+        else:
+            subcmd = None
+    except Exception:
+        pass
+
+    if subcmd is None:
+        args.dolog = False
+    # No logging inside tests. This creates unneeded clutter
+    if os.getenv("DTEST_RUNNING") or os.getenv("CRAM_NODEBUG"):
+        args.dolog = False
+
+    yam_log.init(args.dolog, subcmd)
+    if args.dolog:
+        yam_log.say("PWD: {}".format(os.getcwd()))
+        yam_log.say("Command: {}".format(sys.argv))
+
+        args.showlogname = True
+        yam_log.say("Log: {}\n".format(yam_log.logfile_path()), console_also=not args.noshowlogname)
+
+    keyword_to_repository_dictionary = parse_keyword_string(args.keyword_to_repository_url)
+
+    use_merge_info = True
+
+    # Fall back for older version of Subversion.
+    # from distutils.version import StrictVersion
+    from packaging.version import Version
+
+    if args.repository_version:
+        try:
+            if Version(args.repository_version) < Version("1.5"):
+                use_merge_info = False
+        except ValueError:
+            raise yam_exception.YamException(
+                "{version} is not a valid version number".format(version=args.repository_version)
+            )
+
+    with client_context(
+        database_connection_string=args.database_connection,
+        database_gateway=args.database_gateway,
+        repository_username=args.repository_username,
+        repository_password=args.repository_password,
+        default_repository_url=args.default_repository_url,
+        keyword_to_repository_dictionary=keyword_to_repository_dictionary,
+        quiet=args.quiet,
+        use_merge_info=use_merge_info,
+        use_build_server=args.build_server,
+        operating_system_name=args.operating_system,
+        site_name=args.site,
+        use_build_system=args.yam_make_build_system,
+        jobs=args.jobs,
+    ) as client:
+
+        # This is where we check what type of revision control system to use
+        # with the client associated with the given module
+        """
+        vcs=None
+        if not hasattr(args, "module_name"):
+            vcs = "svn"
+        elif type(args.module_name) == list:
+            if len(args.module_name)==0:
+                vcs="svn"
+            else:
+                vcs = client.reader().vcs_type(args.module_name[0])
+        else:
+            vcs = client.reader().vcs_type(args.module_name)
+
+        if not vcs and hasattr(args, "repository_keyword"):
+            vcs = args.repository_keyword
+        elif not vcs:
+            vcs="svn"
+        """
+
+        # vcs = args.repository_keyword if not vcs else vcs
+        # args.vcs_type = vcs
+
+        # print("VCS TYPE: ", vcs)
+        """
+        revision_control_system=create_revision_control_system(
+                        repository_username=args.repository_username,
+                        repository_password=args.repository_password,
+                        quiet=args.quiet,
+                        use_merge_info=use_merge_info,
+                        vcs=vcs)
+        """
+        revision_control_system = {}
+        for vcs_type in ["svn", "git"]:
+            revision_control_system[vcs_type] = create_revision_control_system(
+                repository_username=args.repository_username,
+                repository_password=args.repository_password,
+                quiet=args.quiet,
+                use_merge_info=use_merge_info,
+                vcs=vcs_type,
+            )
+        client.set_revision_control_system(revision_control_system)
+
+        command_interpreter.set_client(
+            client=client,
+            sandbox_root_directory=args.sandbox_root_directory,
+            operating_system_name=args.operating_system,
+            release_directory=args.release_directory,
+            changelogs_path=args.changelogs_path,
+            keep_release=args.keep_release,
+            site_name=args.site,
+            host_ip=args.host_ip,
+            keyword_to_repository_dictionary=keyword_to_repository_dictionary,
+            use_lock=args.lock,
+        )
+        # use_git=args.use_git)
+
+        # Set appropriate verbosity
+        if not args.quiet:
+
+            def progress_cb(x):
+                """Take a guess."""
+                msg = PROGRESS_PREFIX + "{x}\n".format(x=x)
+                yam_log.say(msg)
+                sys.stdout.write(msg)
+
+            command_interpreter.set_progress_callback(progress_cb)
+
+            if "git" in revision_control_system:
+                revision_control_system["git"].__class__._progress_callback = progress_cb
+
+        # Enable/disable color text output. In auto mode we check if standard
+        # out is a terminal and that the terminal is not dumb.
+        command_interpreter.set_colorize(args.color == "always")
+
+        if args.email_to_address:
+            try:
+                smtp_host, smtp_port = args.email_server.split(":")
+                smtp_port = int(smtp_port)
+            except AttributeError:
+                raise yam_exception.YamException(
+                    "--email-server needs to be defined if --email-to-address "
+                    "is used; for more information see --help"
+                )
+            except ValueError:
+                raise yam_exception.YamException(
+                    '--email-server needs to be of the form "host:port"; ' "for more information see --help"
+                )
+
+            if not args.email_from_address:
+                raise yam_exception.YamException(
+                    "--email-from-address needs to be specified if "
+                    "--email-to-address is specified; for more information "
+                    "see --help"
+                )
+
+            command_interpreter.set_email(
+                smtp_host=smtp_host,
+                smtp_port=smtp_port,
+                email_to_address=args.email_to_address,
+                email_from_address=args.email_from_address,
+            )
+
+        if not args.non_interactive:
+
+            def empty_log_filter(text):
+                """Edits log files with text editor."""
+                from yam import text_editor_utils
+
+                try:
+                    return text_editor_utils.retrieve_text(initial_text=text, editor=args.text_editor)
+                except OSError as exception:
+                    print("Text editor error: {e}".format(e=exception))
+                    return text
+
+            command_interpreter.set_empty_log_filter(empty_log_filter=empty_log_filter)
+
+            def confirmation_callback(message):
+                """Asks user for confirmation and exits if no is received."""
+                while True:
+                    try:
+                        response = raw_input("{message} [y/n]: ".format(message=message))
+                    except EOFError:
+                        response = ""
+                        print()
+
+                    if response == "y":
+                        break
+                    elif response == "n":
+                        raise yam_exception.YamException("User canceled command")
+                    else:
+                        print('Enter either "y" for yes or "n" for no')
+                        print()
+
+            command_interpreter.set_confirmation_callback(callback=confirmation_callback)
+
+        if args.umask:
+            # For user/group writability, we need to set the umask up front.
+            # Even though Python's directory creation functions have a "mode"
+            # parameter, it is masked out by the umask.
+            os.umask(args.umask)
+
+        # Execute callbacks
+        if hasattr(args, "func"):
+            args.func(args)
+        else:
+            # Avoid Python 3 bug: http://bugs.python.org/issue16308
+            parser.error("too few arguments")
+
+
+def normalize_module_name(name):
+    """Remove trailing slashes."""
+    if name:
+        return name.rstrip("/")
+    else:
+        return name
+
+
+def unique_list(list_of_module_names):
+    """Return a list with duplicate items removed while preserving order.
+
+    Trailing slashes will be stripped.
+
+    """
+    list_of_module_names = [normalize_module_name(m) for m in list_of_module_names]
+
+    # SiteDefs needs to get set up first.
+    if "SiteDefs" in list_of_module_names:
+        new_list = ["SiteDefs"]
+    else:
+        new_list = []
+
+    # Turn list_of_module_names into a list if it isn't already.
+    for item in list_of_module_names:
+        if item not in new_list:
+            new_list.append(item)
+
+    return new_list
+
+
+def ansi(code):
+    """Return escaped color code."""
+    return "\x1b[" + code
+
+
+@contextlib.contextmanager
+def lock(lock_filename, timeout=60.0):
+    """Yield an exclusive lock on lock_filename.
+
+    Raise a LockException if another process has the lock.
+
+    """
+    sleep_time = 5.0
+
+    temporary_filename = create_empty_temporary_file(os.path.dirname(lock_filename))
+
+    for _ in range(int(timeout / sleep_time) + 1):
+        try:
+            # Use os.link() since it is atomic. Merely creating a file would
+            # not be atomic and would result in a race condition.
+            os.link(temporary_filename, lock_filename)
+            break
+        except OSError:
+            print(PROGRESS_PREFIX + "Waiting for exclusive use of sandbox ({})".format(lock_filename), file=sys.stderr)
+            time.sleep(sleep_time)
+    else:
+        os.remove(temporary_filename)
+        raise yam_exception.YamException(
+            "The existence of '{}' indicates that "
+            "pyam is currently already running in "
+            "this sandbox".format(lock_filename)
+        )
+
+    def clean_up():
+        """Remove temporary on exit."""
+        forcefully_remove_files([lock_filename, temporary_filename])
+
+    # This is just in case we don't reach the "finally" below. This can happen
+    # if keyboard interrupt happens at pysvn level. This is ugly, but we never
+    # want to risk accidentally leaving "lock" around.
+    import atexit
+
+    atexit.register(clean_up)
+
+    try:
+        yield
+    finally:
+        clean_up()
+
+
+def create_empty_temporary_file(directory):
+    """Return path to temporary file."""
+    temporary_file = tempfile.NamedTemporaryFile(dir=directory, delete=False)
+    temporary_file.close()
+    return temporary_file.name
+
+
+def forcefully_remove_files(filenames):
+    """Remove filenames, ignoring errors."""
+    for name in filenames:
+        try:
+            os.remove(name)
+        except OSError:
+            pass
+
+
+def join_and_wrap_command(argv, width=72, prefix=""):
+    r"""Return joined command.
+
+    >>> join_and_wrap_command(
+    ...     ['alpha', 'beta', '--test', 'gamma gamma foo'],
+    ...     width=12)
+    "alpha beta \\\n    --test \\\n    'gamma gamma foo'"
+
+    >>> join_and_wrap_command(
+    ...     ['alpha', 'beta', '--test', 'gamma gamma'],
+    ...     width=12, prefix='Hello:')
+    "Hello: \\\n    alpha \\\n    beta \\\n    --test \\\n    'gamma gamma'"
+
+    >>> join_and_wrap_command([])
+    ''
+
+    """
+    text = prefix
+
+    backslash = " \\"
+
+    for word in argv:
+        #        quoted = pipes.quote(word)
+        quoted = shlex.quote(word)
+
+        if text:
+            if len(text.splitlines()[-1] + word + backslash) >= width:
+                text += backslash + "\n    "
+
+            if text[-1].strip():
+                text += " "
+
+        text += quoted
+
+    return text
+
+
+def edit_configuration(configuration_path, text_editor):
+    """Edit sandbox configuration in text editor."""
+    from yam import text_editor_utils
+
+    with open(configuration_path) as input_file:
+        contents = input_file.read()
+
+    try:
+        contents = text_editor_utils.retrieve_text(initial_text=contents, editor=text_editor)
+    except OSError as exception:
+        print("Text editor error: {e}".format(e=exception))
+        return
+
+    with open(configuration_path, "w") as output_file:
+        output_file.write(contents)
+
+
+if __name__ == "__main__":
+
+    # I log all exceptions. With YamExceptions specifically I emit just the bare
+    # message to the console and NOT the backtrace.
+    try:
+        sys.exit(main())
+    except yam_exception.YamException as e:
+        import traceback
+
+        yam_log.say("YamException:\n{}".format(traceback.format_exc()))
+        print("YaM error: {}".format(e))
+        sys.exit(2)
+    except Exception:
+        import traceback
+
+        yam_log.say("UNHANDLED EXCEPTION:\n{}".format(traceback.format_exc()))
+        raise

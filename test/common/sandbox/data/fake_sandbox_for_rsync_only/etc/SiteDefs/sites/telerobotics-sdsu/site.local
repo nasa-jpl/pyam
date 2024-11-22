@@ -1,0 +1,82 @@
+# site specific stuff common to all site-config files
+
+#==========================================================
+RTIHOME = /home/atbe/pkgs/src/rti
+
+#==========================================================
+# load in generic flag settings
+include $(SITEDEFSHOME)/sites/shared.mk
+
+HAVE_TRAMEL	= false
+HAVE_NDDS	= false
+
+#==========================================================
+# for TCL
+export TCL_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+export TCL_INCDIR	= -I/home/atbe/pkgs/include/tcl7.4
+export TCL_LIBS		= $(TCL_LIBDIR)/libtcl.a -lm
+
+# for TK
+export TK_LIBDIR	= $(TCL_LIBDIR)
+export TK_INCDIR	= $(TCL_INCDIR) -I/home/atbe/pkgs/include/tk4.0
+export TK_LIBS		= $(TK_LIBDIR)/libtk.a -lX11 $(TCL_LIBS)
+
+# for TIX
+export TIX_LIBDIR	= $(TCL_LIBDIR)
+export TIX_INCDIR	= $(TK_INCDIR) -I/home/atbe/pkgs/include
+export TIX_LIBS		= $(TIX_LIBDIR)/libtix.a $(TK_LIBS)
+
+#==========================================================
+# for TRAMEL
+export TRAMEL_INCDIR	= -I$(YAM_ROOT)/include/Tramel
+export TRAMEL_LIBDIR	= .
+export TRAMEL_LIBS	= -ltramel
+
+ifeq ($(YAM_TARGET),m68k-vxworks)
+  TRAMEL_INCDIR += -Dmc68000
+endif
+
+#==========================================================
+# for Mesa
+export MESA_INCDIR	= -I/home/atbe/pkgs/include
+export MESA_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+export MESA_LIBS	= -L$(MESA_LIBDIR) -lMesaGLU -lMesaGL
+
+#==========================================================
+RTIHOME = /home/atbe/pkgs/src/rti
+STETHOSCOPEHOME = $(RTIHOME)/scope.4.3i
+NDDSHOME = $(RTIHOME)/ndds.1.10c
+RTILIBHOME = $(RTIHOME)/rtilib.3.5e
+
+#==========================================================
+# for RTI's Stethoscope
+export SCOPE_INCDIR	= -I$(STETHOSCOPEHOME)/include/$(RTI_OS) \
+				-I$(STETHOSCOPEHOME)/include/share
+export SCOPE_LIBS	= $(STETHOSCOPEHOME)/lib/$(RTI_TARGET)/libscope.a \
+			      $(RTILIBHOME)/lib/$(RTI_TARGET)/libutilsip.a
+
+#==========================================================
+# for RTI's NDDS
+export NDDS_INCDIR	= -I$(NDDSHOME)/include/$(RTI_OS) \
+				-I$(NDDSHOME)/include/share
+export NDDS_SOLIBS	= $(NDDSHOME)/lib/$(RTI_TARGET)/libndds.a \
+				$(RTILIBHOME)/lib/$(RTI_TARGET)/libutilsip.a
+export NDDS_LIBS = $(NDDS_SOLIBS)
+
+#==========================================================
+# for Matlab
+export HAVE_MATLAB      = false
+export HAVE_SIMULINK    = false
+export HAVE_RTW         = false
+export MATLAB42c        = /v/matlab-4.2c
+#export MATLAB           = /v/matlab-5.1
+export MATLAB           = /v/matlab
+export MATLAB_INCDIR    = -I$(MATLAB)/extern/include
+export SIMULINK_INCDIR  = $(MATLAB_INCDIR) -I$(MATLAB)/simulink/include
+export RTW_INCDIR       = $(SIMULINK_INCDIR) -I$(MATLAB)/rtw/c/libsrc -I$(MATLAB)/rtw/c/src
+export MATLAB_LIBDIR    =
+export MATLAB_LIBS      =
+
+#==========================================================
+# for Perl
+export PERL 		= /share/local/bin/perl

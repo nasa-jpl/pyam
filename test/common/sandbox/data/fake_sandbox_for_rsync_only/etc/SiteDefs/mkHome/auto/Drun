@@ -1,0 +1,142 @@
+#!/bin/bash
+#
+# This is a script to launch programs from different YaM sandboxes. It defines
+# YAM_ROOT and other environment variables before starting the target program.
+
+
+# check command line options
+cmd=""
+help=0
+cmdargs=$#
+
+while [ "$cmdargs" != "0" ]; do
+    arg=$1
+    shift
+    cmdargs=$#
+    if [ "$arg" = "-h" ]; then
+        help=1
+    elif [ "$arg" = "-help" ]; then
+        help=1
+    else
+	cmd="$arg"
+	cmdargs=0
+    fi
+done
+
+if [ $help = "1" ]; then
+    echo "usage: `basename $0` [<options>] <cmd>"
+    echo "where <options> can be:"
+    echo "  -h               get this help message"
+    echo ""
+    echo "See the Dshell documentation for DshellEnv for more details"
+    echo ""
+    exit 2
+fi
+
+############ UNIX/X ENVIRONMENT ###############################################
+
+if [ "X$HOST" = "X" ]; then
+  HOST=`hostname`
+  export HOST
+fi
+
+############ YAM ENVIRONMENT ##################################################
+
+# determine YAM_ROOT directory from the location of this script
+export PATH
+if [ "X$YAM_ROOT" = "X" ]; then
+    # make sure scripts 'yamroot' and 'locate' (called by 'yamroot')
+    # can be found by prepending directory this script is in to PATH
+    PATH_prev=$PATH
+    PATH=`dirname $0`:$PATH
+    export YAM_ROOT
+    YAM_ROOT=`yamroot $0`
+    if [ $? -ne 0 ]; then
+        echo "Error: could not determine YAM_ROOT from $0 (is YAM.config missing?)"
+        exit 1
+    fi
+    PATH=$PATH_prev
+fi
+
+# determine what platform we're running on from uname
+if [ "X$YAM_TARGET" != "X" ]; then
+  if [ "X$YAM_NATIVE" = "X" ]; then
+    YAM_NATIVE=$YAM_TARGET
+  fi
+else
+  YAM_NATIVE=`${YAM_ROOT}/etc/SiteDefs/mkHome/shared/yamNative.sh`
+  YAM_TARGET=$YAM_NATIVE
+fi
+export YAM_NATIVE
+export YAM_TARGET
+
+PATH=${YAM_ROOT}/bin/${YAM_NATIVE}:${YAM_ROOT}/bin:${PATH}
+
+if [ "$YAM_NATIVE" = "i486-cygwin" ]; then
+  PATH=${YAM_ROOT}/lib/${YAM_NATIVE}:${PATH}
+fi
+
+# add path to a modules build directory for any local binaries (eg. test
+# programs) for a module
+if [ "X$LOCAL_DIR" != "X" ]; then
+  PATH=${LOCAL_DIR}/${YAM_NATIVE}:${PATH}
+fi
+
+# source any site specific environment variables
+if [ "X$SITECONFIGDIR" = "X" ]; then
+      if [ "X$YAM_SITE" != "X" ]; then
+         SITECONFIGDIR=${YAM_ROOT}/etc/SiteDefs/sites/${YAM_SITE}
+      else
+        echo "YAM_SITE nor SITECONFIGDIR environment variables are set. Please set YAM_SITE to one of:"
+        sites=`ls -d $YAM_ROOT/etc/SiteDefs/sites/*/site.local | sed 's@.*/etc/SiteDefs/sites/@@' | sed 's@/site.local@@' | sed 's@^@  -- @'`
+        echo "$sites"
+      fi
+fi
+
+if [ -f ${SITECONFIGDIR}/site-vars.sh ]; then
+  . ${SITECONFIGDIR}/site-vars.sh
+fi
+
+############ set LD_LIBRARY_PATH ###############################################
+
+LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${YAM_ROOT}/lib/${YAM_TARGET}:${LD_LIBRARY_PATH}:${YAM_ROOT}/lib/${YAM_TARGET}/PYTHON
+export LD_LIBRARY_PATH
+
+############ PYTHON ENVIRONMENT #################################################
+# determine what platform we're running on from uname
+if [ -d ${YAM_ROOT}/lib/PYTHON ]; then
+    if [ "X$PYTHONPATH" != "X" ]; then
+        PYTHONPATH=${YAM_ROOT}/lib/PYTHON:${PYTHONPATH}
+    else
+        PYTHONPATH=${YAM_ROOT}/lib/PYTHON
+    fi
+fi
+if [ -d ${YAM_ROOT}/lib/${YAM_TARGET}/PYTHON ]; then
+    if [ "X$PYTHONPATH" != "X" ]; then
+        PYTHONPATH=${YAM_ROOT}/lib/${YAM_TARGET}/PYTHON:${PYTHONPATH}
+    else
+        PYTHONPATH=${YAM_ROOT}/lib/${YAM_TARGET}/PYTHON
+    fi
+fi
+export PYTHONPATH
+
+############ HSS ENVIRONMENT ################################################
+
+# The path to the top level of where HSS is located
+if [ "X$HSS_DIR" != "X" ]; then
+    PATH=${HSS_DIR}/casdir:${PATH}
+fi
+
+############ START DAEMONS AND PROGRAMS #######################################
+
+# set an environment variable for Drun's PID
+export DRUN_PID
+DRUN_PID=$$
+
+# run command (finally!)
+$cmd "$@"
+
+# hang on to the return status
+stat=$?
+
+exit $stat

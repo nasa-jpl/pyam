@@ -1,0 +1,40 @@
+#############################################################################
+#
+#  UNIX makefile for Sun4 architecture, SunOS version 4.1.x.
+#
+# modification history
+# ------------ -------
+# RTI,08jun94,vwc GNU make no longer exports variables to the
+#		  environment, so -B$(GCC_EXEC_PREFIX) is *required*
+
+#============================================================================
+include $(SITEDEFSHOME)/site-$(YAM_SITE)/site-config-$(YAM_TARGET)
+include $(SITEDEFSHOME)/site-$(YAM_SITE)/personal.mk
+
+#============================================================================
+# Define the architecture-dependent toolset.
+# Sysadmin: edit these to reflect your system configuration
+
+GCC_RTI_TARGET = sparcSol2
+#===========================================================
+# for using the system GCC
+
+#gnuBin = /opt/gnu/bin
+#export GCC_EXEC_PREFIX = /opt/gnu/lib/gcc-lib
+#export COMPILER_PATH=/opt/gnu/lib/gcc-lib/sparc-sunos4.1.3_U1/2.7.2
+
+#===========================================================
+# for using  RTI's GCC
+
+export gnuBin = /home/atbe/pkgs/bin/sparc-sunos5
+#export gnuBin = $(RTIHOME)/gnu/$(GCC_RTI_TARGET)/bin
+#export GCC_EXEC_PREFIX = $(RTIHOME)/gnu/$(GCC_RTI_TARGET)/lib/gcc-lib/
+#export COMPILER_PATH=$(RTIHOME)/gnu/$(GCC_RTI_TARGET)/lib/gcc-lib/$(RTI_TARGET)/2.6.2/
+#export CC = $(gnuBin)/gcc -B$(GCC_EXEC_PREFIX) -DRTI_UNIX -DRTS_UNIX
+export CC = $(gnuBin)/gcc-2.7.2 -DRTI_UNIX -DRTS_UNIX
+
+#===========================================================
+
+
+export MYCOMPILATIONFLAGS = $(CC_DEFINES)
+#export CSREALTYPE=double

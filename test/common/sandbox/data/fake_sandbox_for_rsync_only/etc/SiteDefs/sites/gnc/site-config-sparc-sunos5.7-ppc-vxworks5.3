@@ -1,0 +1,28 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+TORNADO_VERSION		  := 1.0
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+export WIND_BASE	:= /opt/wind
+export WIND_HOST_TYPE   :=  sun4-solaris2
+
+#==========================================================
+# for RTI's Stethoscope
+export SCOPE_LIBS	=
+
+#==========================================================
+# for RTI's NDDS
+export NDDS_LIBS	=

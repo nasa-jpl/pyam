@@ -1,0 +1,298 @@
+#
+# YAM.config - configuration file for yam utilities and makefiles
+#
+# Edit this file to suit your needs. Lines that end with backslash get spliced
+# together.
+#
+
+WORK_MODULES =
+
+LINK_MODULES = ACSModels/ACSModels-R1-01t-Build03 \
+               ANN/ANN-R1-02p-Build02 \
+               AcmeModels/AcmeModels-R3-47l-Build05 \
+               AcsFswProto/AcsFswProto-R1-02p \
+               AejModels/AejModels-R1-00a \
+               AirshipModels/AirshipModels-R1-00t \
+               AirshipVehicles/AirshipVehicles-R1-00j \
+               Alice/Alice-R1-00d \
+               AnnModels/AnnModels-R1-03m-Build07 \
+               AtbeTclMesg/AtbeTclMesg-R1-46n \
+               Athlete/Athlete-R1-00 \
+               CORE/CORE-R1-05z \
+               CVode/CVode-R1-02l \
+               CameraImageModels/CameraImageModels-R1-02e-Build06 \
+               CameraResponse/CameraResponse-R1-01j \
+               DSoar/DSoar-R1-00j-Build02 \
+               Darts/Darts-R3-15g-Build02 \
+               Darts++/Darts++-R1-07p \
+               Dmex/Dmex-R1-02s-Build01 \
+               DmexStubModels/DmexStubModels-R1-00c-Build01 \
+               Dnoise/Dnoise-R1-00h \
+               DsendsAEPL/DsendsAEPL-R1-00c \
+               DsendsExample/DsendsExample-R1-01m \
+               DsendsMASUtils/DsendsMASUtils-R1-00a \
+               DsendsMER/DsendsMER-R1-00d \
+               DsendsMSL/DsendsMSL-R1-00l \
+               Dshell++/Dshell++-R4-06g \
+               Dshell++Manual/Dshell++Manual-R1-03k \
+               Dshell++Scripts/Dshell++Scripts-R1-42r \
+               DshellEnv/DshellEnv-R1-49r \
+               DshellHippo/DshellHippo-R1-00d \
+               DshellSwift/DshellSwift-R1-04d-Build01 \
+               DshellTutorial/DshellTutorial-R1-02m \
+               DshellUsersGuide/DshellUsersGuide-R3-01b \
+               Dspace/Dspace-R1-16r \
+               DspaceTerrain/DspaceTerrain-R1-07f \
+               EDL/EDL-R1-17 \
+               EDLAeroModels/EDLAeroModels-R2-01f-Build01 \
+               EDLModels/EDLModels-R1-03z-Build03 \
+               EDLNavFilter/EDLNavFilter-R1-00e-Build01 \
+               EDLSites/EDLSites-R1-02v \
+               EDLStudies/EDLStudies-R1-00k \
+               EDLUtils/EDLUtils-R1-01q \
+               EDLVehicles/EDLVehicles-R1-03e \
+               EphemPropagatorModels/EphemPropagatorModels-R1-01j-Build02 \
+               FSTModels/FSTModels-R1-03h \
+               FidoValidation/FidoValidation-R1-01c \
+               FlowDemoModels/FlowDemoModels-R3-44l \
+               GeneralModels/GeneralModels-R3-55i-Build03 \
+               Gestalt/Gestalt-R1-03 \
+               GllModels/GllModels-R3-47s-Build03 \
+               GravityModels/GravityModels-R1-00t-Build03 \
+               GuiUtils/GuiUtils-R1-02r \
+               IKGraph/IKGraph-R1-02l \
+               IdealModels/IdealModels-R3-49z \
+               LaRCAeroDatabase/LaRCAeroDatabase-R1-00f \
+               LaRCModels/LaRCModels-R1-01n \
+               LaserScannerUtils/LaserScannerUtils-R1-00g \
+               MRHEModels/MRHEModels-R1-00b \
+               MRHESYSModels/MRHESYSModels-R1-00a \
+               MRHESimulation/MRHESimulation-R1-00e \
+               MachineVisionCore/MachineVisionCore-R1-00y \
+               Maker/Maker-R1-00e \
+               MakerServer/MakerServer-R1-00h \
+               MarsAtmData/MarsAtmData-R1-01a \
+               MarsGRAM/MarsGRAM-R1-01h-Build02 \
+               MarsGRAM2005/MarsGRAM2005-R2-00d \
+               MarsGRAM2005Models/MarsGRAM2005Models-R1-00k-Build08 \
+               MathTclUtils/MathTclUtils-R1-01x \
+               MathUtils/MathUtils-R1-00q-Build03 \
+               MatlabServer/MatlabServer-R1-01l \
+               MpfModels/MpfModels-R3-47x-Build03 \
+               MyNewGitModule/MyNewGitModule-R1-00 \
+               PinPointLandingModels/PinPointLandingModels-R1-00w \
+               PyCraft/PyCraft-R1-00w \
+               RoamsCache/RoamsCache-R1-01r \
+               RoamsDev/RoamsDev-R1-29 \
+               RoamsMonteCarlo/RoamsMonteCarlo-R1-01r \
+               RoamsValidationAnalysis/RoamsValidationAnalysis-R1-00o \
+               RoamsValidationData/RoamsValidationData-R1-00l \
+               RoverDynModels/RoverDynModels-R1-03r-Build01 \
+               RoverHdwModels/RoverHdwModels-R1-13v-Build03 \
+               RoverNavModels/RoverNavModels-R1-03r-Build01 \
+               RoverVehicles/RoverVehicles-R1-25j \
+               RoverppModels/RoverppModels-R1-03o-Build06 \
+               RsrAcsModels/RsrAcsModels-R1-01l \
+               RsrModels/RsrModels-R1-05 \
+               SOA/SOA-R1-05p \
+               SWIFT++/SWIFT++-R1-03s \
+               SWIFT++TerrainExample/SWIFT++TerrainExample-R1-01a \
+               SherpaAeroModels/SherpaAeroModels-R1-00d \
+               SimScape/SimScape-R1-08e \
+               SimScape-Import/SimScape-Import-R1-01d \
+               SimScape-VisSite/SimScape-VisSite-R1-01b \
+               SimScapeBasic/SimScapeBasic-R1-13q \
+               SimScapeGui/SimScapeGui-R1-03n \
+               SimScapeTest/SimScapeTest-R1-00v \
+               SiteDefs/SiteDefs-R1-63j \
+               Spice/Spice-R1-01b-Build01 \
+               SpiceModels/SpiceModels-R1-00q-Build01 \
+               SpicePositionModels/SpicePositionModels-R1-00s \
+               SurfaceContact/SurfaceContact-R1-18e-Build02 \
+               SwigTclDot/SwigTclDot-R1-00x \
+               TServerAPI/TServerAPI-R1-00v-Build02 \
+               TerrainSurface/TerrainSurface-R1-03j-Build01 \
+               Tests-Dshtcl++/Tests-Dshtcl++-R1-05x \
+               UCIguid/UCIguid-R1-00b \
+               UCIrvineModels/UCIrvineModels-R1-00d \
+               VisSiteClient/VisSiteClient-R1-01f \
+               YaM/YaM-R1-71q \
+               YaM-test/YaM-test-R1-03w \
+               aejModels/aejModels-R1-00e-Build02 \
+               aejTools/aejTools-R1-03v \
+               aejTools2/aejTools2-R1-00h \
+               dev-utils/dev-utils-R1-11v \
+               mathc90/mathc90-R1-01n-Build02 \
+               mdarts/mdarts-R1-01e \
+               qhull/qhull-R1-01l \
+               soabk/soabk-R1-01d \
+               spk2darts/spk2darts-R1-02h
+
+
+
+# BRANCH_ACSModels               = ACSModels-R1-01t
+# BRANCH_ANN                     = ANN-R1-02p
+# BRANCH_AcmeModels              = AcmeModels-R3-47l
+# BRANCH_AcsFswProto             = AcsFswProto-R1-02p
+# BRANCH_AejModels               = AejModels-R1-00a
+# BRANCH_AirshipModels           = AirshipModels-R1-00t
+# BRANCH_AirshipVehicles         = AirshipVehicles-R1-00j
+# BRANCH_Alice                   = Alice-R1-00d
+# BRANCH_AnnModels               = AnnModels-R1-03m
+# BRANCH_AtbeTclMesg             = AtbeTclMesg-R1-46n
+# BRANCH_Athlete                 = Athlete-R1-00
+# BRANCH_CORE                    = CORE-R1-05z
+# BRANCH_CVode                   = CVode-R1-02l
+# BRANCH_CameraImageModels       = CameraImageModels-R1-02e
+# BRANCH_CameraResponse          = CameraResponse-R1-01j
+# BRANCH_DSoar                   = DSoar-R1-00j
+# BRANCH_Darts                   = Darts-R3-15g
+# BRANCH_Darts++                 = Darts++-R1-07p
+# BRANCH_Dmex                    = Dmex-R1-02s
+# BRANCH_DmexStubModels          = DmexStubModels-R1-00c
+# BRANCH_Dnoise                  = Dnoise-R1-00h
+# BRANCH_DsendsAEPL              = DsendsAEPL-R1-00c
+# BRANCH_DsendsExample           = DsendsExample-R1-01m
+# BRANCH_DsendsMASUtils          = DsendsMASUtils-R1-00a
+# BRANCH_DsendsMER               = DsendsMER-R1-00d
+# BRANCH_DsendsMSL               = DsendsMSL-R1-00l
+# BRANCH_Dshell++                = Dshell++-R4-06g
+# BRANCH_Dshell++Manual          = Dshell++Manual-R1-03k
+# BRANCH_Dshell++Scripts         = Dshell++Scripts-R1-42r
+# BRANCH_DshellEnv               = DshellEnv-R1-49r
+# BRANCH_DshellHippo             = DshellHippo-R1-00d
+# BRANCH_DshellSwift             = DshellSwift-R1-04d
+# BRANCH_DshellTutorial          = DshellTutorial-R1-02m
+# BRANCH_DshellUsersGuide        = DshellUsersGuide-R3-01b
+# BRANCH_Dspace                  = Dspace-R1-16r
+# BRANCH_DspaceTerrain           = DspaceTerrain-R1-07f
+# BRANCH_EDL                     = EDL-R1-17
+# BRANCH_EDLAeroModels           = EDLAeroModels-R2-01f
+# BRANCH_EDLModels               = EDLModels-R1-03z
+# BRANCH_EDLNavFilter            = EDLNavFilter-R1-00e
+# BRANCH_EDLSites                = EDLSites-R1-02v
+# BRANCH_EDLStudies              = EDLStudies-R1-00k
+# BRANCH_EDLUtils                = EDLUtils-R1-01q
+# BRANCH_EDLVehicles             = EDLVehicles-R1-03e
+# BRANCH_EphemPropagatorModels   = EphemPropagatorModels-R1-01j
+# BRANCH_FSTModels               = FSTModels-R1-03h
+# BRANCH_FidoValidation          = FidoValidation-R1-01c
+# BRANCH_FlowDemoModels          = FlowDemoModels-R3-44l
+# BRANCH_GeneralModels           = GeneralModels-R3-55i
+# BRANCH_Gestalt                 = Gestalt-R1-03
+# BRANCH_GllModels               = GllModels-R3-47s
+# BRANCH_GravityModels           = GravityModels-R1-00t
+# BRANCH_GuiUtils                = GuiUtils-R1-02r
+# BRANCH_IKGraph                 = IKGraph-R1-02l
+# BRANCH_IdealModels             = IdealModels-R3-49z
+# BRANCH_LaRCAeroDatabase        = LaRCAeroDatabase-R1-00f
+# BRANCH_LaRCModels              = LaRCModels-R1-01n
+# BRANCH_LaserScannerUtils       = LaserScannerUtils-R1-00g
+# BRANCH_MRHEModels              = MRHEModels-R1-00b
+# BRANCH_MRHESYSModels           = MRHESYSModels-R1-00a
+# BRANCH_MRHESimulation          = MRHESimulation-R1-00e
+# BRANCH_MachineVisionCore       = MachineVisionCore-R1-00y
+# BRANCH_Maker                   = Maker-R1-00e
+# BRANCH_MakerServer             = MakerServer-R1-00h
+# BRANCH_MarsAtmData             = MarsAtmData-R1-01a
+# BRANCH_MarsGRAM                = MarsGRAM-R1-01h
+# BRANCH_MarsGRAM2005            = MarsGRAM2005-R2-00d
+# BRANCH_MarsGRAM2005Models      = MarsGRAM2005Models-R1-00k
+# BRANCH_MathTclUtils            = MathTclUtils-R1-01x
+# BRANCH_MathUtils               = MathUtils-R1-00q
+# BRANCH_MatlabServer            = MatlabServer-R1-01l
+# BRANCH_MpfModels               = MpfModels-R3-47x
+# BRANCH_MyNewGitModule          = MyNewGitModule-R1-00
+# BRANCH_PinPointLandingModels   = PinPointLandingModels-R1-00w
+# BRANCH_PyCraft                 = PyCraft-R1-00w
+# BRANCH_RoamsCache              = RoamsCache-R1-01r
+# BRANCH_RoamsDev                = RoamsDev-R1-29
+# BRANCH_RoamsMonteCarlo         = RoamsMonteCarlo-R1-01r
+# BRANCH_RoamsValidationAnalysis = RoamsValidationAnalysis-R1-00o
+# BRANCH_RoamsValidationData     = RoamsValidationData-R1-00l
+# BRANCH_RoverDynModels          = RoverDynModels-R1-03r
+# BRANCH_RoverHdwModels          = RoverHdwModels-R1-13v
+# BRANCH_RoverNavModels          = RoverNavModels-R1-03r
+# BRANCH_RoverVehicles           = RoverVehicles-R1-25j
+# BRANCH_RoverppModels           = RoverppModels-R1-03o
+# BRANCH_RsrAcsModels            = RsrAcsModels-R1-01l
+# BRANCH_RsrModels               = RsrModels-R1-05
+# BRANCH_SOA                     = SOA-R1-05p
+# BRANCH_SWIFT++                 = SWIFT++-R1-03s
+# BRANCH_SWIFT++TerrainExample   = SWIFT++TerrainExample-R1-01a
+# BRANCH_SherpaAeroModels        = SherpaAeroModels-R1-00d
+# BRANCH_SimScape                = SimScape-R1-08e
+# BRANCH_SimScape-Import         = SimScape-Import-R1-01d
+# BRANCH_SimScape-VisSite        = SimScape-VisSite-R1-01b
+# BRANCH_SimScapeBasic           = SimScapeBasic-R1-13q
+# BRANCH_SimScapeGui             = SimScapeGui-R1-03n
+# BRANCH_SimScapeTest            = SimScapeTest-R1-00v
+# BRANCH_SiteDefs                = SiteDefs-R1-63j
+# BRANCH_Spice                   = Spice-R1-01b
+# BRANCH_SpiceModels             = SpiceModels-R1-00q
+# BRANCH_SpicePositionModels     = SpicePositionModels-R1-00s
+# BRANCH_SurfaceContact          = SurfaceContact-R1-18e
+# BRANCH_SwigTclDot              = SwigTclDot-R1-00x
+# BRANCH_TServerAPI              = TServerAPI-R1-00v
+# BRANCH_TerrainSurface          = TerrainSurface-R1-03j
+# BRANCH_Tests-Dshtcl++          = Tests-Dshtcl++-R1-05x
+# BRANCH_UCIguid                 = UCIguid-R1-00b
+# BRANCH_UCIrvineModels          = UCIrvineModels-R1-00d
+# BRANCH_VisSiteClient           = VisSiteClient-R1-01f
+# BRANCH_YaM                     = YaM-R1-71q
+# BRANCH_YaM-test                = YaM-test-R1-03w
+# BRANCH_aejModels               = aejModels-R1-00e
+# BRANCH_aejTools                = aejTools-R1-03v
+# BRANCH_aejTools2               = aejTools2-R1-00h
+# BRANCH_dev-utils               = dev-utils-R1-11v
+# BRANCH_mathc90                 = mathc90-R1-01n
+# BRANCH_mdarts                  = mdarts-R1-01e
+# BRANCH_qhull                   = qhull-R1-01l
+# BRANCH_soabk                   = soabk-R1-01d
+# BRANCH_spk2darts               = spk2darts-R1-02h
+
+#
+# Below is a list of variables that can be set:
+#
+# WORK_MODULES - pyam modules to checkout from repository for
+#                editing/compilation.
+# LINK_MODULES - pyam modules to link to.
+# BRANCH_workmod - Specify tag and branch tag to use for checking out
+#                  work module "workmod" and possibly branching from it.
+#
+# Each entry in WORK_MODULES must have a corresponding variable specifying
+# repository branch options. These variables are named BRANCH_workmod, where
+# "workmod" is the name of the desired work module (such as BRANCH_MyModule).
+#
+# The BRANCH_module variables is set to:
+#
+#     <revision_tag> <branch_id>
+#
+# <revision_tag> is the tag for the version you want to branch off of, and
+# hyphen-<branch_id> is appended to the tag for the branch you want to
+# create. For example,
+#
+#     BRANCH_MyModule = MyModule-R1-05 my_branch
+#
+# makes branch "MyModule-R1-05-my_branch" off of tagged version
+# "MyModule-R1-05" for work module MyModule.
+#
+# If <branch_id> is not specified, then just checkout version <revision_tag>,
+# without creating a branch from it.
+#
+# There is a special <revision_tag> "main" which specifies repository's current
+# main branch. For example,
+#
+#     BRANCH_MyModule = main
+#
+# You cannot branch off of "main" and it is almost always best to not work
+# directly on the main branch. But it sometimes necessary in extreme cases
+# of merge conflict.
+#
+# It is an error if <revision_tag> does not exist. Use <branch_id> to create a
+# new branch.
+#
+# If BRANCH_module is not specified at all for a given work module, the default
+# action is to branch off the latest release appending hyphen-login for the
+# branch name. So if the latest version of MyModule is "MyModule-R1-05", then
+# branch tag might default to "MyModule-R1-05-my_branch".

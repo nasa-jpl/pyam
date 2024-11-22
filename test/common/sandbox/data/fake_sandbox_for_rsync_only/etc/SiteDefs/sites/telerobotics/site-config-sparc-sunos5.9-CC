@@ -1,0 +1,228 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+
+USE_GCC295 = false
+HAVE_MATHEMATICA = true
+
+HAVE_SCOPE = false
+
+CC_VERSION = 6.0
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+HAVE_TRAMEL		= false
+export HAVE_MATHEMATCA	= true
+export HAVE_TMATH	= true
+
+#==========================================================
+#include $(SITEDEFSHOME)/sites/site.gcc
+
+SUNPRO_DIR = /TPS/V13.1.1/SUNWspro/WS6U2
+SUNPRO_FILES_DIR = $(SUNPRO_DIR)
+AR = /TPS/V13.1.1/bin/ar
+
+#LIBGCC = -L/home/atbe/pkgs/lib/gcc-lib/sparc-sun-solaris2.7/2.95.2 -lgcc
+#export LIBGCC
+
+LIBSTDCPP = -L$(SUNPRO_FILES_DIR)/lib -liostream -lCstd
+export LIBSTDCPP
+
+# Add a -v flag for verbosity
+CC = $(SUNPRO_DIR)/bin/cc
+CPLUSPLUS := $(SUNPRO_DIR)/bin/CC
+F77 = $(SUNPRO_DIR)/bin/f77
+LIBF77 = -L$(SUNPRO_FILES_DIR)/lib -lM77 -lF77 -lsunmath
+LINKER_F77			:= $(F77)
+
+#==========================================================
+# are we building our own shared libraries?
+ifeq ($(BUILDING_SHARED_LIBS),)
+  BUILDING_SHARED_LIBS = true
+endif
+export BUILDING_SHARED_LIBS
+
+CC_WARNINGS =
+CPLUSPLUS_WARNINGS =
+
+CPUSPLUS_EXCEPTIONS_FLAG = -features=except
+
+CC_COMPILE_FLAGS	 += -I$(SUNPRO_FILES_DIR)/include/CCios
+CPLUSPLUS_COMPILE_FLAGS	 += -I$(SUNPRO_FILES_DIR)/include/CCios
+
+ifeq ($(BUILDING_SHARED_LIBS),true)
+  CC_COMPILE_FLAGS		+= $(SHARED_COMPILE_FLAG)
+  CPLUSPLUS_COMPILE_FLAGS	+= $(SHARED_COMPILE_FLAG)
+  CPLUSPLUS_COMPILE_FLAGS +=  -instances=static
+endif
+
+
+LD_SHARED = $(LD) -G -L$(YAM_ROOT)/lib/$(YAM_NATIVE)
+CC_DEPEND_FLAG  := -xM
+CPLUSPLUS_DEPEND_FLAG  := $(CC_DEPEND_FLAG)
+
+export CC_EXTRA_SHLIB
+
+ifeq ($(BUILDING_SHARED_LIBS),true)
+  export LD_SHARED
+endif
+
+# Add a -w flag to suppress warnings
+
+CC_OPTIMIZATION = -xO3
+CPLUSPLUS_OPTIMIZATION = -O3
+
+ifeq ($(CC_VERSION),5.0)
+  CC_OPTIMIZATION += -native
+  CPLUSPLUS_OPTIMIZATION +=  -native
+  CPLUSPLUS_COMPILE_FLAGS += -template=wholeclass
+endif
+
+
+#==========================================================
+CPLUSPLUS_DEFINES       += $(CC_DEFINES)
+
+GCC_EXEC_PREFIX = /home/atbe/pkgs/lib/gcc-lib/sparc-sun-solaris2.7/2.95.2
+LIBGCC = -L$(GCC_EXEC_PREFIX) -lgcc
+
+ifneq ($(USE_SHARED_LIBS),false)
+ export SHARED_LIBDIR = /home/atbe/pkgs/lib/$(YAM_TARGET)-shared
+ CC_LINK_FLAGS += -L$(SHARED_LIBDIR) -R$(SHARED_LIBDIR) -L$(SUNPRO_FILES_DIR)/lib -I$(SUNPRO_FILES_DIR)/include/CCios
+ CPLUSPLUS_LINK_FLAGS += -L$(SHARED_LIBDIR) -R$(SHARED_LIBDIR) -L$(SUNPRO_FILES_DIR)/lib
+endif
+
+#==========================================================
+JPEG_INCDIR	:= -I/home/atbe/pkgs/sparc-sunos5.9/include
+JPEG_LIBS	:= -ljpeg
+
+#==========================================================
+# for X11
+export X11_INCDIR       = -I/usr/openwin/include
+
+#==========================================================
+# for TCL
+  export HAVE_TCL		= true
+  export TCL_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+  export TCL_INCDIR	= -I/home/atbe/pkgs/include/tcl8.3
+  #export TCL_INCDIR	= -I/home/atbe1/users/jain/Test/telerobotics/tcl8.0
+  export TCL_LIBS		= -L$(TCL_LIBDIR) -ltcl8.3 -ldl -lm
+
+  # for TK
+  export HAVE_TK		= true
+  export TK_LIBDIR	= $(TCL_LIBDIR)
+  export TK_INCDIR	= $(TCL_INCDIR) -I/home/atbe/pkgs/include/tk8.3
+  export TK_LIBS		= -L$(TK_LIBDIR) -ltk8.3 -lX11 $(TCL_LIBS)
+
+  # for TIX
+  export HAVE_TIX		= true
+  export TIX_LIBDIR	= $(TCL_LIBDIR)
+  export TIX_INCDIR	= $(TK_INCDIR) -I/home/atbe/pkgs/include/tix8.2/generic
+  export TIX_LIBS		= -L$(TIX_LIBDIR) -ltix8.2 $(TK_LIBS)
+
+#==========================================================
+# Motif flags
+export MOTIF_LIBS = -L/usr/dt/lib -R/usr/dt/lib -lXm
+export MOTIF_INCDIR = -I/usr/dt/include
+
+#==========================================================
+# Doxygen flags
+export HAVE_DOXYGEN = true
+export DOXYGEN = /home/atbe/pkgs/bin/$(YAM_TARGET)/doxygen
+
+#==========================================================
+# for OpenInventor
+export HAVE_IV = false
+
+#==========================================================
+#
+HAVE_TRAMEL = false
+
+#==========================================================
+# this extra library is needed for using with the sparcSol2.5 libraries
+HAVE_NDDS = false
+NDDS_LIBS += -lthread
+NDDS_SOLIBS += -lthread
+
+PERL = /home/atbe/pkgs/bin/sparc-sunos5.7/perl
+
+#==========================================================
+# the currently available Scope library appears to be gcc compatible only
+HAVE_SCOPE=false
+
+#==========================================================
+# set MATLAB_LIBS to its target specific path
+export HAVE_MATLAB      = true
+export HAVE_SIMULINK    = true
+export HAVE_RTW         = true
+export MATLAB_INCDIR    = -I$(MATLAB)/extern/include
+export SIMULINK_INCDIR  = $(MATLAB_INCDIR) -I$(MATLAB)/simulink/include
+export RTW_INCDIR       = $(SIMULINK_INCDIR) -I$(MATLAB)/rtw/c/libsrc -I$(MATLAB)/rtw/c/src
+export MATLAB_LIBDIR    = $(MATLAB)/extern/lib/sol2
+export MATLAB_LIBS      = -R$(MATLAB_LIBDIR) -L$(MATLAB_LIBDIR) -leng -lmat -lmx -lmi -lut
+
+#==========================================================
+# for Mathematica
+export MATHEMATICA_BASEDIR = /v/math/AddOns/MathLink/DevelopersKits/Solaris/CompilerAdditions
+export MATHEMATICA_LIBDIR = $(MATHEMATICA_BASEDIR)
+export MATHEMATICA_INCDIR = $(MATHEMATICA_BASEDIR)
+export MATHEMATICA_BINDIR = $(MATHEMATICA_BASEDIR)
+export MATHEMATICA_LIBS =  -L$(MATHEMATICA_LIBDIR) -lML
+
+#==========================================================
+TIFF_DIR		:= /home/atbe/pkgs/sparc-sunos5.9/stow/tiff-v3.5.5
+export TIFF_LIBDIR	:= $(TIFF_DIR)/lib
+export TIFF_INCDIR	:= $(TIFF_DIR)/include
+export TIFF_LIBS	:= -L$(TIFF_LIBDIR) -ltiff
+
+#==========================================================
+# for Tmath
+export TMATH_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+export TMATH_INCDIR	=
+export TMATH_LIBS	= -L$(TMATH_LIBDIR) -ltmath -lexttools \
+			   $(MATLAB_LIBS) $(MATHEMATICA_LIBS) \
+			   -ltmathkernel -lstdc++
+
+#==========================================================
+# for libxml2 (XML parser library - settings obtained from `xml2-config --cflags` & `xml2-config --libs` )
+#export LIBXML2_CFLAGS = -I/usr/include/libxml2
+#export LIBXML2_LIBS = -L/usr/lib -R/usr/lib -lxml2 -lz -lpthread -lm -lsocket -lnsl
+
+XML2DIR	       := /home/atbe/pkgs/sparc-sunos5.9/stow/libxml2-2.6.4
+LIBXML2_CFLAGS := -I$(XML2DIR)/include/libxml2
+LIBXML2_LIBS   := -L$(XML2DIR)/lib -R$(XML2DIR)/lib -lxml2 -lz -lpthread -lm -lsocket -lnsl
+#==========================================================
+# disabled MEX builds for this old target
+SKIP_MEX_BUILD	?= true
+
+#==========================================================
+# for GraphViz
+GRAPHVIZ_VERSION=1.14
+GRAPHVIZ_LIBDIR=/home/atbe/pkgs/sparc-sunos5.9/stow/graphviz-${GRAPHVIZ_VERSION}/lib/graphviz
+# parent directory of "graphviz/" subdirectory
+GRAPHVIZ_INCDIR=/home/atbe/pkgs/sparc-sunos5.9/stow/graphviz-${GRAPHVIZ_VERSION}/include
+
+#==========================================================
+# Library to read/write PGM files
+export PGM_DIR = /home/atbe/pkgs/sparc-sunos5.9/stow/netpbm-10.18.13
+export PGM_LIBDIR = $(PGM_DIR)/link
+export PGM_INCDIR = $(PGM_DIR)/include
+export PGM_LIBS   = -L$(PGM_LIBDIR) -lnetpbm
+
+#==========================================================
+#==========================================================

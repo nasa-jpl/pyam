@@ -1,0 +1,155 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+include $(SITEDEFSHOME)/sites/site.gcc
+
+#==========================================================
+# include site specific stuff
+#include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-i486-fedora5-linux
+
+# per http://sourceforge.net/tracker/index.php?func=detail&aid=1560993&group_id=1645&atid=101645
+CPLUSPLUS_COMPILE_FLAGS += -fno-strict-aliasing
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+
+###GL_LIBS   := -Wl,-Bdynamic -lGLU  -lGL -lXmu -lXt -lXi -lXpm -lXp -lX11
+
+# This enables the new DT_GNU_HASH hashstyle linker option to allow faster
+# loading of dynamic libraries at run time
+# See http://gentoo-wiki.org/HOWTO_Hashstyle
+# Verify that this works by running 'readelf -a' on shared library and
+#   grepping for GNU_HASH
+CC_SHARED_LINK_FLAGS += -Wl,--hash-style=both
+
+#====================================================
+
+# not available on noether
+HAVE_COIN	:= true
+HAVE_COINSHADERS := false
+HAVE_SOGTK := false
+HAVE_SOQT := false
+
+COIN_DIR     := /home/dlab/pkgs/$(YAM_TARGET)/stow/Coin-2.5-svn
+COIN_INCDIR     :=  $(COIN_DIR)
+COIN_INC     :=  \
+                -I$(COIN_DIR)/include \
+                -DCOIN3D
+
+COIN_LIBS       := \
+                -L$(COIN_DIR)/lib \
+                -lCoin \
+                 -L/home/dlab/pkgs/$(YAM_TARGET)/stow/simage-1.6.1/lib -lsimage
+
+COININC     := $(COIN_DIR)/include
+
+SOXTINC 	:= /home/dlab/pkgs/$(YAM_TARGET)/stow/SoXt-1.2.2/include
+HAVE_SOXT := true
+SOXT_CFLAGS = -I/home/dlab/pkgs/$(YAM_TARGET)/stow/SoXt-1.2.2/include
+SOXT_LIBS = -L/home/dlab/pkgs/$(YAM_TARGET)/stow/SoXt-1.2.2/lib -lSoXt
+
+GLEW_CFLAGS = -I/home/dlab/pkgs/i486-fedora6-linux/include
+GLEW_LIBS = -L/home/dlab/pkgs/i486-fedora6-linux/lib -lGLEW -lglut
+
+#====================================================
+MOTIF_LIBS = -L/usr/lib -lXm
+
+
+#====================================================
+###export HIPPOPATH = /usr/include/HippoDraw
+HIPPO_INCS              := -I$(QT_DIR)/include -I/usr/include/HippoDraw
+HIPPO_LIBS              := -L$(QT_DIR)/lib -L/usr/lib -lqt-mt -lqui -laxiswidget -lhippoqt -lhippo
+
+#====================================================
+QWT_INCLUDES      := -I/home/dlab/pkgs/src/qwt/qwt-5.0.2/src
+QWT_LIBS          := -L/home/dlab/pkgs/src/qwt/qwt-5.0.2 -lqwt
+#====================================================
+SWIG_DIR :=  /home/dlab/pkgs/i486-fedora6-linux/stow/swig-1.3.35
+SWIG := $(SWIG_DIR)/bin/swig
+SWIG_PYTHON_OPTS := -O -threads -keyword -nodefaultctor -nofastproxy -noproxyimport
+SWIG_PYTHON_INC   := -I$(SWIG_DIR)/share/swig/1.3.35/python -I$(SWIG_DIR)/share/swig/1.3.35  $(SWIG_PYTHON_OPTS)
+
+
+HAVE_TCL := false
+
+export HAVE_PYTHON    := true
+PYTHONDIR             := /usr
+PYTHON_BIN            := /usr/bin/python
+export PYTHON_INCDIR  := -I$(PYTHONDIR)/include/python2.4
+export PYTHON_LIBS    := -L$(PYTHONDIR)/lib -lpython2.4
+
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+CC              = /usr/bin/gcc
+CPLUSPLUS       = /usr/bin/gcc
+F77             = /usr/bin/gfortran
+LINKER_F77      := $(F77)
+LIBF77          := -lgfortran
+LIBG2C          := /usr/lib/libg2c.so.0
+LIBSTDCPP       = -L/usr/lib/gcc/i386-redhat-linux/4.0.2 -lstdc++
+
+
+BUILD_STATIC_LIBS       := true
+# are we building our own shared libraries?
+ifeq ($(BUILDING_SHARED_LIBS),)
+  BUILDING_SHARED_LIBS = true
+endif
+export BUILDING_SHARED_LIBS
+
+ifeq ($(BUILDING_SHARED_LIBS),true)
+  CC_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  CPLUSPLUS_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  export LD_SHARED
+  LD_SHARED = $(CC) -shared
+  export CC_EXTRA_SHLIB
+endif
+
+
+HAVE_DOXYGEN	:= true
+DOXYGEN 	:= /usr/bin/doxygen
+
+export LIBXML2_CFLAGS   := -I/usr/include/libxml2
+export LIBXML2_LIBS 	:= -L/usr/lib -lxml2
+
+export JPEG_CFLAGS   := -I/usr/include/libjpeg
+export JPEG_LIBS	= -L/usr/lib -ljpeg
+
+PGM_LIBS      := -L/usr/lib -lnetpbm
+
+GTK_INCLUDES := -I/usr/include/gtk-2.0 -I/usr/include/cairo \
+                       -I/usr/include/glib-2.0 -I/usr/include/pango-1.0 \
+                       -I/usr/lib/glib-2.0/include -I/usr/lib/gtk-2.0/include \
+                       -I/usr/include/atk-1.0
+GTK_LIBS  := -lgtk-x11-2.0
+
+GLUT_LIBS     := -L/usr/lib -lglut
+GLEW_LIBS = -L/home/atbe/pkgs/i486-fedora6-linux/lib -lGLEW -lglut
+export GL_LIBS          = -Wl,-Bdynamic -L/usr/X11R6/lib -lGLU -lGL
+
+HAVE_HDF5 := true
+HDF5_INCDIR := /usr/lib
+HDF5_LIBS   := -lhdf5 -lhdf5_cpp
+
+
+JPLV_INCS := -I/home/dlab/pkgs/i486-fedora6-linux/stow/jplv-070424/include
+JPLV_LIBS := -L/home/dlab/pkgs/i486-fedora6-linux/stow/jplv-070424/lib -ljplv
+
+ELMER_INCDIR              := -I/home/dlab/pkgs/src/elmer/elmer1.1.5/elmer
+ELMER_LIBS                := -L/home/dlab/pkgs/src/elmer/elmer1.1.5/elmer -lelmer
+
+XT_LIBS   := -lXmu -lXt -lXi -lXpm -lXp
+
+PNG_LIBS         := -L/usr/lib -lpng
+GIF_LIBS         := -L/usr/lib -lgif
+TIFF_LIBS        := -L/usr/lib -ltiff

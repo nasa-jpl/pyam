@@ -1,0 +1,20 @@
+SKIP_YAM_VERSION := true
+
+ifndef YAM_ROOT
+    include ../../etc/SiteDefs/mkHome/shared/overall.mk
+else
+    include $(YAM_ROOT)/etc/SiteDefs/mkHome/shared/overall.mk
+endif
+
+BIN_LINKS := pyam pyam-build
+PYTHON_LINKS := yam
+DTEST_TESTDIR := test
+
+DOXYGEN_DOCS := true
+
+CTAGS_FLAGS := --exclude="build"
+
+regtest-module::
+	rm -rf /tmp/tmp.* /tmp/cramtest*
+
+include $(YAM_ROOT)/etc/SiteDefs/makefile-yam-tail.mk

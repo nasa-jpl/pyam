@@ -1,0 +1,22 @@
+ERROR: Commented out code starting with "# print('litter the " found at should_fail.py:1
+ERROR: Commented out code starting with "# print 'litter the " found at should_fail.py:2
+ERROR: Commented out code starting with "# print "litter the " found at should_fail.py:3
+ERROR: Commented out code starting with "# print('litter the " found at should_fail.py:5
+ERROR: Commented out code starting with "# print 'litter the " found at should_fail.py:6
+ERROR: Commented out code starting with "# print "litter the " found at should_fail.py:7
+ERROR: Commented out code starting with "#     print('litter " found at should_fail.py:9
+ERROR: Commented out code starting with "#      print 'litter" found at should_fail.py:10
+ERROR: Commented out code starting with "#       print "litte" found at should_fail.py:11
+ERROR: Commented out code starting with "# def bad():" found at should_fail.py:16
+ERROR: Commented out code starting with "# if abc:" found at should_fail.py:18
+ERROR: Commented out code starting with "# if trailing_spaces" found at should_fail.py:19
+ERROR: Commented out code starting with "# if 1  :" found at should_fail.py:20
+ERROR: Commented out code starting with "# if 5:" found at should_fail.py:21
+ERROR: Commented out code starting with """"
+print('this is b" found at should_fail.py:26
+ERROR: Commented out code starting with "# class   Foo:" found at should_fail.py:35
+ERROR: Commented out code starting with "# class Foo1:" found at should_fail.py:36
+ERROR: Commented out code starting with "#   class  Foo2:" found at should_fail.py:37
+ERROR: Commented out code starting with "# class Foo3(Bar):" found at should_fail.py:38
+ERROR: Commented out code starting with "# class FooTrailingS" found at should_fail.py:39
+Commented out code was found. Delete the code (make use of revision control).

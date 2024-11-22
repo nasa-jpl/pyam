@@ -1,0 +1,59 @@
+# site specific stuff common to all site-config files
+
+#==========================================================
+RTIHOME = /home/atbe/pkgs/src/rti
+
+#==========================================================
+# load in generic flag settings
+include $(SITEDEFSHOME)/sites/shared.mk
+
+HAVE_TRAMEL =
+
+#==========================================================
+# for TCL
+#export TCL_LIBDIR 	= /opt/tcltk-80/lib
+#export TCL_INCDIR 	= -I/opt/tcltk-80/include
+#export TCL_LIBS		= $(TCL_LIBDIR)/libtcl.a -lm
+
+# for TK
+#export TK_LIBDIR 	= /opt/tcltk-80/lib
+#export TK_INCDIR 	= $(TCL_INCDIR)
+#export TK_LIBS		= $(TK_LIBDIR)/libtk.a -L/usr/openwin/lib -lX11 $(TCL_LIBS)
+
+#==========================================================
+# for TRAMEL
+TRAMEL_INCDIR =
+TRAMEL_LIBDIR =
+
+#==========================================================
+# for Mesa
+export MESA_INCDIR	= -I/home/atbe/pkgs/include
+export MESA_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+export MESA_LIBS	= -L$(MESA_LIBDIR) -lMesaGLU -lMesaGL
+
+#==========================================================
+# for RTI's Stethoscope
+export SCOPE_INCDIR	= -I$(STETHOSCOPEHOME)/include/$(RTI_OS) \
+				-I$(STETHOSCOPEHOME)/include/share \
+				-I$(RTILIBHOME)/include/unix \
+				-I$(RTILIBHOME)/include/share
+
+export SCOPE_LIBS	= $(STETHOSCOPEHOME)/lib/$(RTI_TARGET)/libscope.a \
+			      $(RTILIBHOME)/lib/$(RTI_TARGET)/libutilsip.a
+
+#==========================================================
+# for RTI's NDDS
+export NDDS_INCDIR	= -I$(NDDSHOME)/include/$(RTI_OS) \
+				-I$(NDDSHOME)/include/share
+export NDDS_LIBS	= $(NDDSHOME)/lib/$(RTI_TARGET)/libndds.a \
+				$(RTILIBHOME)/lib/$(RTI_TARGET)/libutilsip.a
+
+#==========================================================
+# for Matlab
+export MATLAB		= /dsw/gca-matlab-6.0
+export MATLAB_INCDIR	= -I$(MATLAB)/extern/include
+export MATLAB_LIBS	= -L$(MATLAB)/extern/lib/sol2
+
+#==========================================================
+# for Perl
+export PERL		= /tps/bin/perl

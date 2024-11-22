@@ -1,0 +1,32 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+#BUILDING_SHARED_LIBS := false
+BUILD_STATIC_LIBS	:= true
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-i486-cygwin
+
+CPLUSPLUS_WARNINGS := -Wall -idirafter /usr/include
+CC_WARNINGS := -Wall -idirafter /usr/include
+CPLUSPLUS_LIBS	:= -mno-cygwin
+CC_LIBS			:= -mno-cygwin
+
+HDF5_DIR	:= /usr/hdf5-nocygwin
+HDF5_LIBS       := -L$(HDF5_DIR)/lib -lhdf5_cpp -lhdf5 -lz
+HDF5_INCDIR	:= $(HDF5_DIR)/include
+
+SOA_LIBS := -lSOA -lMathc90Linalg
+DVAR_LIBS := -lDvar $(HDF5_LIBS) $(SOA_LIBS) -lDerrorHandler -lYAClasses
+DARTS_LIBS := -lDartsBase -lDarts++ -lOldMath -lIKGraph
+CORE_LIBS := -lHDF5Store -lCORE -lDvarHDF5Store -lCORE $(DVAR_LIBS)
+SPICE_LIBS := -lSpice /lib/cspice.lib /lib/csupport.lib
+SIM_SCAPE_LIBS := -lSimScape $(CORE_LIBS) $(SPICE_LIBS) -ljpeg
+SIM_SCAPE_BASIC_LIBS := -lSimScapeBasic $(SIM_SCAPE_LIBS)

@@ -1,0 +1,4 @@
+[pyam]
+database_connection="127.0.0.1:54321:fake:fake:fake"
+default_repository_url='fake_repo_url'
+repository_version 1.2.1

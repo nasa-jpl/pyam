@@ -1,0 +1,55 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+#==========================================================
+include $(SITEDEFSHOME)/site.common
+include $(SITEDEFSHOME)/sites/site.gcc
+
+#==========================================================
+# for X11
+export X11_INCDIR       = -I/usr/X11R6/include
+export X11_LIBDIR       = /usr/X11R6/lib
+
+#==========================================================
+# for TCL
+export HAVE_TCL		= true
+export TCL_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+export TCL_INCDIR	= -I/home/atbe/pkgs/include
+export TCL_LIBS		= $(TCL_LIBDIR)/libtcl.a -lm
+
+# for TK
+export HAVE_TK		= true
+export TK_LIBDIR	= $(TCL_LIBDIR)
+export TK_INCDIR	= $(TCL_INCDIR)
+export TK_LIBS		= $(TK_LIBDIR)/libtk.a -L/usr/X11/lib -lX11 $(TCL_LIBS)
+
+#==========================================================
+# for TRAMEL
+export HAVE_TRAMEL	= false
+export TRAMEL_INCDIR	=
+export TRAMEL_LIBDIR	=
+export TRAMEL_LIBS	=
+
+#==========================================================
+# for RTI's Stethoscope
+export HAVE_SCOPE	= false
+export SCOPE_INCDIR	=
+export SCOPE_LIBS	=
+
+#==========================================================
+# for RTI's NDDS
+export HAVE_NDDS	= false
+export NDDS_INCDIR	=
+export NDDS_LIBS	=
+
+#==========================================================
+# for Matlab
+export HAVE_MATLAB	= false
+export HAVE_SIMULINK    = false
+export HAVE_RTW         = false
+export MATLAB		=
+export MATLAB_INCDIR    = -I$(MATLAB)/extern/include
+export SIMULINK_INCDIR  = $(MATLAB_INCDIR) -I$(MATLAB)/simulink/include
+export RTW_INCDIR       = $(SIMULINK_INCDIR) -I$(MATLAB)/rtw/c/libsrc -I$(MATLAB)/rtw/c/src
+export MATLAB_LIBDIR    =
+export MATLAB_LIBS	=

@@ -1,0 +1,7 @@
+Dshell++ R4-06g                              -  jmc         2006-07-12 14:23:04
+DshellEnv R1-49r                             -  jain        2006-07-14 12:24:09
+LINK_MODULES = Dshell++/Dshell++-R4-06f \
+               DshellEnv/DshellEnv-R1-44e
+# BRANCH_Dshell++  = Dshell++-R4-06f  jain
+# BRANCH_DshellEnv = DshellEnv-R1-44e jain
+OK

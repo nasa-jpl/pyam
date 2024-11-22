@@ -1,0 +1,56 @@
+#############################################################################
+#
+#  UNIX makefile for Sun4 architecture, SunOS version 4.1.x.
+#
+# modification history
+# ------------ -------
+# RTI,08jun94,vwc GNU make no longer exports variables to the
+#		  environment, so -B$(GCC_EXEC_PREFIX) is *required*
+
+#============================================================================
+include $(SITEDEFSHOME)/site-$(YAM_SITE)/site-config-$(YAM_TARGET)
+include $(SITEDEFSHOME)/site-$(YAM_SITE)/personal.mk
+
+#============================================================================
+# Define the architecture-dependent toolset.
+# Sysadmin: edit these to reflect your system configuration
+
+export RTI_TARGET=sparcSol2
+
+#===========================================================
+# for using the system GCC
+
+#gnuBin = /opt/gnu/bin
+#export GCC_EXEC_PREFIX = /opt/gnu/lib/gcc-lib
+#export COMPILER_PATH=/opt/gnu/lib/gcc-lib/sparc-sunos4.1.3_U1/2.7.2
+
+#===========================================================
+# for using  RTI's GCC
+
+export gnuBin = $(RTIHOME)/gnu/$(RTI_TARGET)/bin
+export GCC_EXEC_PREFIX = $(RTIHOME)/gnu/$(RTI_TARGET)/lib/gcc-lib/
+export COMPILER_PATH=$(RTIHOME)/gnu/$(RTI_TARGET)/lib/gcc-lib/$(RTI_TARGET)/2.6.2/
+export CC = $(gnuBin)/gcc -B$(GCC_EXEC_PREFIX) -DRTI_UNIX -DRTS_UNIX
+
+#export AR = ar
+#export RANLIB = ranlib
+
+#===========================================================
+
+#export MYEXTRASDIR=$(ATBE_ROOT)/src/cs-utils
+#export TCL_LIBDIR=/home/jain/src/lib
+#export TCL_LIBDIR=/usr/local/lib
+
+#export XIPC_HOME=/proj/nm-ds1/integration/ipc
+
+#export DSHELLHOME=$(ATBE_ROOT)/src/Dshell
+#export DSHELLLIBS_DIR= $(MYEXTRASDIR)/lib/$(TARGET)
+
+#export DSHELLLIBS = $(ATBE_ROOT)/lib/$(TARGETS)/libDshell.a
+
+#export TCL_INCDIR=/usr/local/include
+#export TCL_LIBDIR=/usr/local/lib
+
+export MYCOMPILATIONFLAGS = $(CC_DEFINES)
+
+#export CSREALTYPE=double

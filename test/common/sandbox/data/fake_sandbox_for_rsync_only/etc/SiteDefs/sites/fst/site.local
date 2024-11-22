@@ -1,0 +1,67 @@
+# site specific stuff common to all site-config files
+
+#==========================================================
+RTIHOME = /home/atbe/pkgs/src/rti
+
+#==========================================================
+# load in generic flag settings
+include $(SITEDEFSHOME)/sites/shared.mk
+
+export HAVE_NDDS	= false
+
+#==========================================================
+# for TCL
+export TCL_LIBDIR	=  /home/atbe/pkgs/lib/$(YAM_TARGET)
+export TCL_INCDIR	=  -I/home/atbe/pkgs/include/tcl8.0
+export TCL_LIBS		= -L$(TCL_LIBDIR) -ltcl8.0  -ldl -lm
+
+# for TK
+#export X11_ROOT	= /opt/X11R5
+export X11_LIBDIR	= /opt/X11R6/lib
+
+export TK_LIBDIR	= $(TCL_LIBDIR)
+export TK_INCDIR	= $(TCL_INCDIR) -I/home/atbe/pkgs/include/tk8.0 \
+				-I/opt/X11R6/include
+export TK_LIBS		= -L$(TK_LIBDIR) -ltk8.0 -lX11 \
+				$(TCL_LIBS)
+# for TIX
+export TIX_LIBDIR	= $(TCL_LIBDIR)
+export TIX_INCDIR       = $(TK_INCDIR) -I/home/atbe/pkgs/include
+export TIX_LIBS         = -L$(TIX_LIBDIR) -ltix4.1.8.0 $(TK_LIBS)
+
+
+#==========================================================
+# for TRAMEL
+export TRAMEL_INCDIR	=
+export TRAMEL_LIBDIR	=
+export TRAMEL_LIBS	= -ltramel -ltcltramel
+
+#==========================================================
+# for RTI's Stethoscope
+export SCOPE_INCDIR	= -I$(STETHOSCOPEHOME)/include/$(RTI_OS) \
+				-I$(STETHOSCOPEHOME)/include/share
+export SCOPE_LIBS	= $(STETHOSCOPEHOME)/lib/$(RTI_TARGET)/libscope.a \
+			      $(RTILIBHOME)/lib/$(RTI_TARGET)/libutilsip.a
+
+#==========================================================
+# for Mesa
+export MESA_INCDIR	= -I/home/atbe/pkgs/include
+export MESA_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+export MESA_LIBS	= -L$(MESA_LIBDIR) -lMesaGLU -lMesaGL
+
+#==========================================================
+# for RTI's NDDS
+export NDDS_INCDIR	= -I$(NDDSHOME)/include/$(RTI_OS) \
+				-I$(NDDSHOME)/include/share
+export NDDS_LIBS	= $(NDDSHOME)/lib/$(RTI_TARGET)/libndds.a \
+				$(RTILIBHOME)/lib/$(RTI_TARGET)/libutilsip.a
+
+#==========================================================
+# for Matlab
+export MATLAB		= /opt/matlab
+export MATLAB_INCDIR	= -I$(MATLAB)/extern/include
+export MATLAB_LIBS	= -L$(MATLAB)/extern/lib/sol2
+
+#==========================================================
+# for Perl
+export PERL		= /usr/local/bin/perl

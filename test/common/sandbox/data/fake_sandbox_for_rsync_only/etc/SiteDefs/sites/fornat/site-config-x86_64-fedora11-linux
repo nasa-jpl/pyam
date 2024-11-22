@@ -1,0 +1,88 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-x86_64-fedora9-linux
+
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+
+
+#================================================
+PYTHONDIR             := /usr
+PYTHON_BIN            := $(PYTHONDIR)/bin/python
+PYTHON_INCDIR := -I/usr/include/python2.6
+PYTHON_LIBS := -L/usr/lib/python2.6 -lpython2.6
+PYTHONPATH	:=
+
+#================================================
+SWIG_PATH := /usr
+SWIG_VERSION  := 1.3.39
+
+SWIG_PYTHON_OPTS := -O -threads -keyword -nodefaultctor -nofastproxy -noproxyimport -w511
+SWIG      := $(SWIG_PATH)/bin/swig
+SWIG_PYTHON_INC   := $(SWIG_PYTHON_OPTS) -I$(SWIG_PATH)/share/swig/$(SWIG_VERSION)/python -I$(SWIG_PATH)/share/swig/$(SWIG_VERSION)
+
+#================================================
+BOOST_INCS := -I/usr/include
+
+#================================================
+SOXT_CFLAGS = -I/home/dlab/pkgs/$(YAM_TARGET)/stow/SoXt-1.2.2/include \
+                -I/usr/lib64/glib-2.0/include \
+                -I/usr/lib64/gtk-2.0/include
+SOXT_LIBS = -L/home/dlab/pkgs/$(YAM_TARGET)/stow/SoXt-1.2.2/lib -lSoXt
+
+
+#================================================
+# use this because the system 1.5.8 has a problem with relative path
+# symbolic links for images directories
+DOXYGEN := /home/dlab/pkgs/src/doxygen/doxygen-1.5.9/bin/doxygen
+
+#================================================
+HAVE_OGRE := true
+OGRE_CFLAGS := -I/usr/include/OGRE
+OGRE_LIBS := -L/usr/lib64 -lOgreMain
+OGRE_RENDERING_SYSTEM_PLUGIN := /usr/lib64/OGRE/RenderSystem_GL.so
+OGRE_SAMPLES := /usr/lib64/OGRE/Samples
+
+#================================================
+HAVE_OIS := true
+OIS_CFLAGS := -I/usr/include/OIS
+OIS_LIBS := -L/usr/lib64 -lOIS
+
+#================================================
+
+HAVE_LCM := true
+LCM_INCS := -I/home/dlab/pkgs/${YAM_TARGET}/stow/lcm-0.3.0/include
+LCM_LIBS := -L/home/dlab/pkgs/${YAM_TARGET}/stow/lcm-0.3.0/lib -llcm
+
+#================================================
+
+HAVE_GTK := true
+GTK_INCLUDES := -I/usr/include/gtk-2.0 -I/usr/lib64/gtk-2.0/include \
+                -I/usr/include/atk-1.0 -I/usr/include/cairo \
+                -I/usr/include/pango-1.0 -I/usr/include/glib-2.0 \
+                -I/usr/lib64/glib-2.0/include -I/usr/include/pixman-1 \
+                -I/usr/include/freetype2 -I/usr/include/libpng12
+
+GTK_LIBS := -lgtk-x11-2.0
+
+#================================================
+
+HAVE_GLADE := true
+GLADE_INCS := -I/usr/include/libglade-2.0
+GLADE_LIBS := -L/usr/lib64 -lglade-2.0
+
+
+#================================================
+LIBLBFGS_INCS	:= -I/home/dlab/pkgs/$(YAM_TARGET)/stow/liblbfgs-1.8/include
+LIBLBFGS_LIBS	:= -L/home/dlab/pkgs/$(YAM_TARGET)/stow/liblbfgs-1.8/lib -llbfgs

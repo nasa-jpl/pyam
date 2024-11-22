@@ -1,0 +1,54 @@
+To: fake.address@127.0.0.1
+From: fake.sender@127.0.0.1
+Subject: [telerobotics] Dshell++-R4-06h: module release notification
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+MIME-Version: 1.0
+
+pyam 1.25.18 says...
+Release R4-06h (2024-04-15 08:11:49):
+
+	My ☃
+
+
+Mon Apr 15 08:11:49 2024  fakeuser
+
+	* Revision tag: R4-06h
+	Ticket IDs: 12345
+
+	* Add snowman ☃
+
+	  SVN revision: 9
+	  M my_file.txt
+
+	* Add a directory; let me make this message longer to test wrapping in
+	change log
+
+	  SVN revision: 8
+	  A my_new_directory
+
+
+Diff:
+
+Index: my_file.txt
+===================================================================
+--- my_file.txt	(.../releases/Dshell++-R4-06g)	(revision 9)
++++ my_file.txt	(.../featureBranches/Dshell++-R4-06g-my_branch)	(revision 9)
+@@ -1,4 +1,4 @@
+-Lectus. Porta in et velit mollis sapien pulvinar senectus curae.
++this is my ☃.
+ 
+ 
+ 1
+
+
+Command: /home/dlab3/dev/users/leake/roamsPkg/src/pyam/pyam --quiet \
+    --release-directory=/tmp/tmp.y9Wh8Prp4i/fake_release \
+    --no-build-server --database-connection=127.0.0.1:28491/test \
+    --default-repository-url=file:///tmp/tmp.y9Wh8Prp4i/fake_repository \
+    --site=telerobotics --email-server=127.0.0.1:8025 \
+    --email-to-address=fake.address@127.0.0.1 \
+    --email-from-username=fake.sender --email-from-hostname=127.0.0.1 \
+    --non-interactive save --to-tagged '--release-note-message=My ☃' \
+    --bug-id=12345 --username=fakeuser Dshell++
+

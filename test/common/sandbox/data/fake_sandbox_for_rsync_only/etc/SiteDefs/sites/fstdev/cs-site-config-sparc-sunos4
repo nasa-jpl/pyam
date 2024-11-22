@@ -1,0 +1,33 @@
+#############################################################################
+#
+#  UNIX makefile for Sun4 architecture, SunOS version 4.1.x.
+#
+# modification history
+# ------------ -------
+# RTI,08jun94,vwc GNU make no longer exports variables to the
+#		  environment, so -B$(GCC_EXEC_PREFIX) is *required*
+
+#============================================================================
+include $(SITEDEFSHOME)/site-$(YAM_SITE)/site-config-$(YAM_TARGET)
+include $(SITEDEFSHOME)/site-$(YAM_SITE)/personal.mk
+
+#============================================================================
+export RTI_TARGET=sun4
+
+#============================================================================
+# Define the architecture-dependent toolset.
+# Sysadmin: edit these to reflect your system configuration
+
+#===========================================================
+# for using  RTI's GCC
+
+export gnuBin = $(RTIHOME)/gnu/sparcSunos4/bin
+export GCC_EXEC_PREFIX = $(RTIHOME)/gnu/sparcSunos4/lib/gcc-lib/
+export COMPILER_PATH=$(RTIHOME)/gnu/sparcSunos4/lib/gcc-lib/sparcSunos4/2.6.2/
+export CC = $(gnuBin)/gcc -B$(GCC_EXEC_PREFIX) -DRTI_UNIX -DRTS_UNIX
+export CPLUSPLUS = $(CC)
+
+#===========================================================
+
+export MYCOMPILATIONFLAGS = $(CC_DEFINES)
+#export CSREALTYPE=double

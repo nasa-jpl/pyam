@@ -1,0 +1,179 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+
+# if you change PYTHONPATH, you may need to also edit site-vars.sh
+PYTHONPATH=${DTPS_PYTHONPATH}:${MLABWRAP_PATH}:${COTS_PYTHONPATH}
+export PYTHONPATH
+
+LD_LIBRARY_PATH=${COTS_PATH}/lib
+QTDIR=${COTS_PATH}
+PATH=${COTS_PATH}/bin
+PYTHON_BIN =  $(COTS_PATH)/bin/python
+
+#==========================================================
+#include $(SITEDEFSHOME)/site.common
+include $(SITEDEFSHOME)/sites/site.gcc
+
+CC		= $(COTS_PATH)/bin/gcc
+CPLUSPLUS	= $(COTS_PATH)/bin/gcc
+#F77		= $(COTS_PATH)/bin/g77
+#LIBF77		= -lg2c
+#LINKER_F77      := $(F77)
+
+USE_GFORTRAN := true
+F77             =  $(COTS_PATH)/bin/gfortran
+LIBF77          := -lgfortran
+LINKER_F77      := $(F77)
+#LIBG2C          := /usr/lib/libg2c.so.0
+LIBG2C          :=
+#LIBG2c := -lg2c
+
+
+LIBSTDCPP	= -lstdc++
+export LIBSTDCPP
+
+#==========================================================
+# profiling options
+#_PROF			:= true
+ifeq ($(_PROF),true)
+  CC_COMPILE_FLAGS	+= -pg
+  CPLUSPLUS_COMPILE_FLAGS += -pg
+  CC_LINK_FLAGS		+= -pg
+  CPLUSPLUS_LINK_FLAGS  += -pg
+  BUILDING_SHARED_LIBS	:= false
+else
+  CC_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  F77_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  CPLUSPLUS_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+endif
+
+
+# are we building our own shared libraries?
+ifeq ($(BUILDING_SHARED_LIBS),)
+  BUILDING_SHARED_LIBS = true
+endif
+export BUILDING_SHARED_LIBS
+
+
+ifeq ($(BUILDING_SHARED_LIBS),true)
+  CC_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  CPLUSPLUS_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  export LD_SHARED
+  LD_SHARED = $(CC) -shared -L$(YAM_ROOT)/lib/$(YAM_NATIVE)
+  export CC_EXTRA_SHLIB
+endif
+
+
+#==========================================================
+ifneq ($(USE_SHARED_LIBS),false)
+ export SHARED_LIBDIR = .
+ CC_LINK_FLAGS += -L$(SHARED_LIBDIR)
+ CPLUSPLUS_LINK_FLAGS += -L$(SHARED_LIBDIR)
+endif
+
+
+#==========================================================
+# for Python
+export HAVE_PYTHON	:= true
+PYTHONDIR		:= $(COTS_PATH)
+export PYTHON_INCDIR	:= -I$(PYTHONDIR)/include/python2.5
+export PYTHON_LIBS	:= -L$(PYTHONDIR)/lib -lpython2.5 -lpthread -ldl -lutil
+
+# disable  threading in swig .cc files
+CC_COMPILE_FLAGS += -DSWIG_PYTHON_NO_THREADS
+CPLUSPLUS_COMPILE_FLAGS += -DSWIG_PYTHON_NO_THREADS
+
+#==========================================================
+HAVE_COIN	:= false
+
+#==========================================================
+  # for TCL
+  TCLDIR		:= /usr
+  TCLSH			:= $(TCLDIR)/bin/tclsh
+  export HAVE_TCL	:= false
+  export TCL_LIBDIR	:= $(TCLDIR)/lib
+  export TCL_INCDIR	:= -I$(TCLDIR)/include -DUSE_NON_CONST
+  export TCL_LIBS	:= -L$(TCLDIR)/lib -ltcl8.3 -ldl -lm
+
+  # for TK
+  TKDIR			:= /usr
+  export HAVE_TK	:= true
+  export TK_LIBDIR	:= $(TKDIR)/lib
+  export TK_INCDIR	:= $(TCL_INCDIR) -I$(TKDIR)/include
+  export TK_LIBS	:= -L$(TKDIR)/lib -ltk8.3 -L$(X11_LIBDIR) -lX11 $(TCL_LIBS)
+
+
+################ with RPM ################
+#IV_LIB_DIR      := /home/atbe/pkgs/$(YAM_TARGET)/lib
+
+#==========================================================
+# machine vision libraries
+#MV_LIBDIR 			:= $(MVDIR)/../lib/linux2
+
+#==========================================================
+# for libxml2 (XML parser library - settings obtained from `xml2-config --cflags` & `xml2-config --libs` )
+# export LIBXML2_CFLAGS = -I/usr/local/include/libxml2
+export LIBXML2_CFLAGS = -I$(COTS_PATH)/include/libxml2
+
+# export LIBXML2_LIBS = -L/usr/local/lib -lxml2 -lz -lm
+export LIBXML2_LIBS = -L$(COTS_PATH)/lib -lxml2 -lz -lm
+
+#==========================================================
+#export MATLAB           = /home/atbe/pkgs/src/matlab/matlab-12.1-linux
+export HAVE_MATLAB      = false
+export HAVE_SIMULINK    = false
+export HAVE_RTW         = false
+
+#==========================================================
+# needed by graphviz and doxygen
+#export DOTFONTPATH   = /home/atbe/pkgs/src/webfonts
+HAVE_GRAPHVIZ	:= false
+GRAPHVIZ_LIBDIR = /usr/lib/graphviz
+# parent directory of "graphviz/*.h" subdirectory
+GRAPHVIZ_INCDIR = /usr/include
+
+#==========================================================
+# Library to read/write PGM files
+#export PGM_LIBDIR = /usr/lib
+#export PGM_INCDIR = /usr/include
+
+export PGM_LIBDIR = $(COTS_PATH)/lib
+export PGM_INCDIR = $(COTS_PATH)/include
+
+export PGM_LIBS   = -L$(PGM_LIBDIR) -lnetpbm
+
+#==========================================================
+# Doxygen flags
+export HAVE_DOXYGEN = true
+export DOXYGEN	    = $(COTS_PATH)/bin/doxygen -d Validate
+#==========================================================
+# for SWIG
+
+#==========================================================
+HAVE_MASL	:= true
+# MASL_LIBS := /afs/jpl.nasa.gov/group/mas/current/libdp-spice.a /afs/jpl.nasa.gov/group/mas/current/libdp-vector.a
+
+# MASL_LIBS := $(MAS_LOAD_POINT)/current/libdp-spice.a $(MAS_LOAD_POINT)/current/libdp-vector.a
+# MASL_LIBS := $(MAS_LOAD_POINT)/current/libdp-spice.a
+
+# MASL_LIB_PATH must defined in environment
+MASL_LIBS := $(MASL_LIB_PATH)/libdp-spice.a
+
+# export MAS_LOAD_POINT = /nav/common/sw/linux/redhat/8.0/masl
+
+#==========================================================
+JPEG_LIBS      := -ljpeg

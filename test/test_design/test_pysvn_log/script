@@ -1,0 +1,28 @@
+#!/usr/bin/env python
+#
+# pysvn client should only be accessed via self._client().
+
+import os
+import sys
+import os.path
+
+
+def main():
+    path = '../../../yam'
+    for filename in os.listdir(path):
+        if filename.endswith('.py'):
+            full_path = os.path.join(path, filename)
+            with open(full_path) as input_file:
+                # Only one function should call pysvn.Client(). Everyone else
+                # should call that helper function.
+                if filename not in ['svn_revision_control_system.py', 'git_revision_control_system.py']:
+                    if input_file.read().count('.log(') > 2:
+                        sys.stderr.write(
+                            'pysvn.Client.log() should only be accessed via '
+                            'self._log(); found more than 2 calls to '
+                            'pysvn.Client.log() in %s\n' % input_file)
+                        return 2
+
+
+if __name__ == '__main__':
+    sys.exit(main())

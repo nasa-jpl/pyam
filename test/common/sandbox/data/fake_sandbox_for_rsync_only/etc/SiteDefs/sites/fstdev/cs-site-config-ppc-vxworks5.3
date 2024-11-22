@@ -1,0 +1,55 @@
+#############################################################################
+#
+#  UNIX makefile for Sun4 architecture, SunOS version 4.1.x.
+#
+# modification history
+# ------------ -------
+# RTI,08jun94,vwc GNU make no longer exports variables to the
+#		  environment, so -B$(GCC_EXEC_PREFIX) is *required*
+
+include $(SITEDEFSHOME)/site-$(YAM_SITE)/personal.mk
+
+#============================================================================
+# Define the architecture-dependent toolset.
+# Sysadmin: edit these to reflect your system configuration
+
+# Just in case some VxWorks libraries (like lstLib) are used.
+# vxHome = /local/VxWorks/sparcVx5
+
+#============================================
+#  for using system GCC
+export CPLUSPLUS=$(CC)
+
+#========================
+# for using RTI's GCC
+
+CC_PATH = /opt/wind-1.0-ppc
+
+export vxHome = $(CC_PATH)
+
+ifeq ($(DS1_NATIVE_SYSTEM),sparc-sunos5)
+  gnuPath = $(CC_PATH)/host/sun4-solaris2
+  VX_VW_BIN = $(CC_PATH)/host/sun4-solaris2/powerpc-wrs-vxworks/bin
+  export COMPILER_PATH= $(CC_PATH)/host/sun4-solaris2/powerpc-wrs-vxworks/lib
+else
+  gnuPath = $(CC_PATH)/host/sun4-sunos4
+  VX_VW_BIN = $(CC_PATH)/host/sun4-sunos4/powerpc-wrs-vxworks/bin
+#  export COMPILER_PATH=
+#  $(CC_PATH)/host/sun4-sunos4/powerpc-wrs-vxworks/lib
+  export COMPILER_PATH= $(CC_PATH)/host/sun4-sunos4/bin
+  export GCC_EXEC_PREFIX = $(vxHome)/host/sun4-sunos4/lib/gcc-lib/
+endif
+
+export gnuBin = $(gnuPath)/bin
+#========================
+
+RANLIB=$(gnuBin)/ranlib
+
+export RTI_TARGET=ppcVx5.3
+
+export DSHELLHOME=$(ATBE_ROOT)/src/Dshell
+
+export TCL_INCDIR=-I/usr/local/include
+
+export MYCOMPILATIONFLAGS = -DVXWORKS $(TCL_INCDIR)
+#export CSREALTYPE=double

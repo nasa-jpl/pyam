@@ -1,0 +1,33 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-i486-fedora7-linux
+
+COIN_INCDIR     :=  /usr/include/Coin2
+COIN_INC     :=  \
+                -I/usr/include/Coin2 \
+                -DCOIN3D
+
+COIN_LIBS       := \
+                -L$(COIN_DIR)/lib \
+                -lCoin \
+                 -L/home/dlab/pkgs/i486-fedora6-linux/stow/simage-1.6.1/lib -lsimage
+
+SOXT_CFLAGS = -I/home/atbe/pkgs/i486-fedora6-linux/stow/SoXt-1.2.2/include
+SOXT_LIBS = -L/home/atbe/pkgs/i486-fedora6-linux/stow/SoXt-1.2.2/lib -lSoXt
+
+PYTHONPATH :=

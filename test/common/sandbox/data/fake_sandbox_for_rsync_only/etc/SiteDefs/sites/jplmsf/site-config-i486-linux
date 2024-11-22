@@ -1,0 +1,50 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+BUILDING_SHARED_LIBS = false
+
+include $(SITECONFIGDIR)/../telerobotics/site-config-x86_64-fedora13-linux
+
+HAVE_HDF5 := false
+HAVE_LCM := false
+HAVE_BOST_LOG := false
+HAVE_PYTHON   := false
+HAVE_LCPPATH   := false
+HAVE_CEGUI := false
+
+SWIG :=
+
+#================================================
+# This version of Boost is built with multithread support.
+HAVE_BOOST := true
+BOOST_DIR := /usr
+BOOST_INCS := -I$(BOOST_DIR)/include -DNO_BOOST_LOG
+BOOST_THREAD_LIBS := $(BOOST_DIR)/lib64/libboost_thread.a -pthread
+BOOST_LOG_LIBS :=
+
+#================================================
+LIBLBFGS_INCS	:= -I/home/dlab/pkgs/x86_64-fedora13-linux/stow/liblbfgs-1.8/include
+LIBLBFGS_LIBS	:= -L/home/dlab/pkgs/x86_64-fedora13-linux/stow/liblbfgs-1.8/lib -llbfgs
+
+#=========================================================
+HAVE_BULLET := true
+#BULLET_DIR := /home/dlab/pkgs/x86_64-fedora13-linux/stow/bullet-2.77-armquad
+BULLET_DIR := /home/dlab/pkgs/ubuntu/stow/bullet-2.77-armgamma
+BULLET_INCS := -I$(BULLET_DIR)/include/bullet -DBT_USE_DOUBLE_PRECISION
+BULLET_COLLISION_LIBS := -L$(BULLET_DIR)/lib -lBulletCollision -lLinearMath
+BULLET_DYNAMICS_LIBS := -L$(BULLET_DIR)/lib -lBulletDynamics
+
+#================================================
+HAVE_OGRE     := true
+OGRE_DIR := /home/dlab/pkgs/x86_64-fedora13-linux/stow/ogre-1.7.1
+#OGRE_DIR := /home/atbe/dev/users/tclifton/OGRE-install
+OGRE_CFLAGS := -DOGRE_DOUBLE_PRECISION=1 -isystem $(OGRE_DIR)/include/OGRE
+OGRE_LIBS := -L$(OGRE_DIR)/lib -lOgreMain
+
+#================================================
+HAVE_OIS := true
+OIS_CFLAGS := -isystem /home/dlab/pkgs/x86_64-fedora13-linux/stow/ois-1.2.0/include/OIS
+OIS_LIBS := -L/home/dlab/pkgs/x86_64-fedora13-linux/stow/ois-1.2.0/lib -lOIS
+
+#================================================
+WITHOUT_SIMSCAPE	:= true

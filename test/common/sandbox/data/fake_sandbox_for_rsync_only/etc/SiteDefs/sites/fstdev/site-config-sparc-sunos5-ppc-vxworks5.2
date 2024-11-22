@@ -1,0 +1,123 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+#export HAVE_TRAMEL	= false
+#==========================================================
+#include $(SITEDEFSHOME)/site.common
+include $(SITEDEFSHOME)/sites/site.gcc
+
+#==========================================================
+export YAM_OS = vx
+#===========================================
+#CC_PATH = /opt/wind-1.0-ppc
+CC_PATH = /opt/wind-1.0.1-ppc
+
+VX_VW_BASE= $(CC_PATH)/host
+VX_VW_BIN = $(VX_VW_BASE)/sun4-solaris2/powerpc-wrs-vxworks/bin
+export GCC_EXEC_PREFIX = $(VX_VW_BASE)/sun4-solaris2/lib/gcc-lib/
+
+#===========================================
+# C compiler and flags for the native target
+
+export CC		= $(VX_VW_BIN)/gcc -ansi -pedantic
+export CC_DEPEND_FLAG	= -MM
+export CC_INCLUDES	:= -I$(YAM_ROOT)/include \
+		-I$(CC_PATH)/target/h \
+		-I$(VX_VW_BASE)/include
+
+#		-I$(VX_VW_BASE)/src/gnu/gcc/ginclude \
+#		-I$(VX_VW_BASE)/src/gnu/newlib/libc/include
+
+export CC_DEFINES	= -DVXWORKS -DCPU=PPC603 -Dppc
+export CC_WARNINGS	= -Wall -Wmissing-prototypes -Waggregate-return
+#export CC_OPTIMIZATION	= -ggdb3
+export CC_LIBS		:= $(GCC_EXEC_PREFIX)powerpc-wrs-vxworks/cygnus-2.7.2-960126/libgcc.a
+
+export CC_COMPILE_FLAGS	= $(CC_OPTIMIZATION) $(CC_DEFINES) \
+			   $(CC_WARNINGS) $(CC_INCLUDES)
+export CC_LINK_FLAGS	= $(CC_OPTIMIZATION) -L$(YAM_ROOT)/lib/$(YAM_TARGET)
+
+#CC_OPTIM_CFLAGS	= -ggdb3
+#SYS_INCLUDE_FLAGS	=
+#export GCC_EXEC_PREFIX =
+
+#==========================================================
+# C++ compiler and flags for the native target
+
+CPLUSPLUS= $(CC)
+#gnuPath = $(RTIHOME)/gnu/sparcSol2-m68k
+#gnuPath = $(VX_VW_BASE)/sun4-solaris2/powerpc-wrs-vxworks
+#gnuBin = $(gnuPath)/bin
+#RTI_GCC_EXEC_PREFIX = $(gnuPath)/lib/gcc-lib/
+#RTI_GCC_EXEC_PREFIX = $(VX_VW_BASE)/sun4-solaris2/lib/gcc-lib
+
+#export CPLUSPLUS = $(CC) -B$(RTI_GCC_EXEC_PREFIX) -mcpu=603
+export CPLUSPLUS_DEPEND_FLAG	= $(CC_DEPEND_FLAG)
+export CPLUSPLUS_INCLUDES	:= $(CC_INCLUDES)
+export CPLUSPLUS_DEFINES	= $(CC_DEFINES) -fno-builtin -fno-for-scope \
+                                   -nostdinc -c
+
+export CPLUSPLUS_WARNINGS	= $(CC_WARNINGS) \
+	-Woverloaded-virtual -Wno-unused -Wno-aggregate-return -Wconversion
+#export CPLUSPLUS_OPTIMIZATION	= -O3
+#-fno-default-inline -finline-functions
+export CPLUSPLUS_LIBS		:= $(CC_LIBS)
+#    /opt/rti/gnu/sparcSol2-m68k/lib/gcc-lib/sparcSol2-m68k/2.6.2/libgcc.a
+
+export CPLUSPLUS_COMPILE_FLAGS = $(CPLUSPLUS_OPTIMIZATION) $(CPLUSPLUS_DEFINES) \
+				    $(CPLUSPLUS_WARNINGS) $(CPLUSPLUS_INCLUDES)
+export CPLUSPLUS_LINK_FLAGS    = -g -L$(YAM_ROOT)/lib/$(YAM_TARGET)
+
+
+#CPLUSPLUS_OPTIM_CFLAGS = -DSUNOS5
+
+#==========================================================
+export AR	= $(VX_VW_BIN)/ar
+export LD	= $(VX_VW_BIN)/ld -r
+export RANLIB	= $(VX_VW_BIN)/ranlib
+
+#==========================================================
+# for TCL
+export TCL_INCDIR       = -I$(VX_VW_BASE)/include
+
+# for TK
+export HAVE_TK		=
+export HAVE_TIX		=
+
+#==========================================================
+# for TRAMEL
+export TRAMEL_INCDIR    = -I/proj/proto/v2.2/ppc-vxworks/include
+#export TRAMEL_LIBDIR    = /proj/proto/v2.2/tramel/ppc-vxworks5.2
+export TRAMEL_LIBDIR    = /proj/proto/v2.2/ppc-vxworks/lib
+export TRAMEL_LIBS	= -L$(TRAMEL_LIBDIR) -ltramel
+
+#==========================================================
+# for RTI's Stethoscope
+STETHOSCOPEHOME = /opt/rti-5.0c-ppc/scope.5.0c
+RTILIBHOME = /opt/rti-5.0c-ppc/rtilib.3.7h
+export HAVE_SCOPE	= true
+
+SCOPE_50 = true
+SCOPEGCCEXT =
+# have .so libraries and not .a ones for this target
+export SCOPE_LIBS	= $(STETHOSCOPEHOME)/lib/$(RTI_TARGET)$(SCOPEGCCEXT)/libscope.so \
+			      $(RTILIBHOME)/lib/$(RTI_TARGET)$(SCOPEGCCEXT)/libutilsip.so
+
+#==========================================================
+# for RTI's NDDS
+export HAVE_NDDS	= false
+
+#==========================================================
+# for Matlab
+export HAVE_MATLAB	= false
+export HAVE_SIMULINK    = false
+export HAVE_RTW         = false
+export MATLAB_INCDIR    = -I$(MATLAB)/extern/include
+export SIMULINK_INCDIR  = $(MATLAB_INCDIR) -I$(MATLAB)/simulink/include
+export RTW_INCDIR       = $(SIMULINK_INCDIR) -I$(MATLAB)/rtw/c/libsrc -I$(MATLAB)/rtw/c/src
+export MATLAB_LIBDIR    =
+export MATLAB_LIBS      =

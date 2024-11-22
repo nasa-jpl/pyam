@@ -1,0 +1,67 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-i486-rh9-linux
+
+
+BUILD_STATIC_LIBS       := true
+
+CC              = /usr/bin/gcc4
+CPLUSPLUS       = /usr/bin/gcc4
+#==========================================================
+# add other flag settings that are specific to this site/target build
+PYTHON_BIN            := /usr/bin/python
+
+#==========================================================
+HAVE_MASL	:= false
+
+#==========================================================
+# for Python
+export HAVE_PYTHON    := true
+PYTHONDIR             := /usr
+export PYTHON_INCDIR  := -I$(PYTHONDIR)/include/python2.3
+export PYTHON_LIBS    := -L$(PYTHONDIR)/lib -lpython2.3 -lpthread -ldl -lutil
+
+ifeq ($(PYTHONPATH),)
+  PYTHONPATH	:= /home/atbe/pkgs/src/Python/installs/i486-fedora4-linux/2.4.1/lib/python
+else
+  PYTHONPATH	:= $(PYTHONPATH):/home/atbe/pkgs/src/Python/installs/i486-fedora4-linux/2.4.1/lib/python
+endif
+export  PYTHONPATH
+
+#==========================================================
+HAVE_IV		:= false
+HAVE_COIN       := true
+
+HAVE_SOXT = true
+SOXT_CFLAGS = -I/home/atbe/pkgs/$(YAM_TARGET)/stow/SoXt-1.2.2/include
+SOXT_LIBS = -L/home/atbe/pkgs/$(YAM_TARGET)/stow/SoXt-1.2.2/lib  -lSoXt
+
+COIN_INCDIR     :=  \
+                -I/home/atbe/pkgs/${YAM_TARGET}/stow/Coin-2.4.1/include \
+                -D_REENTRANT -DCOIN3D
+
+COIN_LIBS       := \
+                -L/home/atbe/pkgs/${YAM_TARGET}/stow/Coin-2.4.1/lib \
+                -lCoin $(GL_LIBS)
+
+#========+=================================================
+# Library to read/write PNG files
+export PNG_LIBDIR = /usr/lib
+export PNG_INCDIR = /usr/include
+export PNG_LIBS   = -L$(PNG_LIBDIR) -lpng
+
+TIFF_LIBS	  := -L/usr/lib -ltiff
+GIF_LIBS	  := -L/usr/lib -lgif
+BZ2_LIBS	  := -L/usr/lib -lbz2
+FREETYPE_LIBS	  := -L/usr/lib -lfreetype
+GTK_LIBS	  := -L/usr/lib -lgtk-x11-2.0

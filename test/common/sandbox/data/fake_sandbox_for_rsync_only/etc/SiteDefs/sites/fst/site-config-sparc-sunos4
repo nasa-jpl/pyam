@@ -1,0 +1,27 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+#=========================================================
+HAVE_NDDS = false
+HAVE_TRAMEL = true
+
+#==========================================================
+
+#==========================================================
+include $(SITEDEFSHOME)/site.common
+include $(SITEDEFSHOME)/sites/site.gcc
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+#==========================================================
+# for Matlab
+export MATLAB_LIBS	= -L$(MATLAB)/extern/lib/sun4
+
+#----------------------------------------------------------
+# override for individual cases
+export TRAMEL_INCDIR 	= -I/opt/fst/include
+export TRAMEL_LIBDIR	= /opt/fst/lib
+export TRAMEL_LIBS	=  -L$(TRAMEL_LIBDIR) -ltramel
+export TRAMEL_FST_LIBS  = -ltcltramel -ltrfstime

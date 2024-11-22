@@ -1,0 +1,13 @@
+very_core_modules = SiteDefs DshellEnv
+core_modules = $(very_core_modules) Dtest
+
+######## Third party tools ################################
+
+# ThirdPartyPkg: third party tools bundled with external Dshell installations
+MODULES_ThirdPartyPkg = thirdParty \
+$(core_modules)
+
+# Note that the following contains tabs and new lines on purpose.
+# This is to make sure the parser properly splits the line based on any whitespace.
+MODULES_YaMPkg = $(core_modules) YaM    YaM-test \
+                 YaMUtils  DshellEnv

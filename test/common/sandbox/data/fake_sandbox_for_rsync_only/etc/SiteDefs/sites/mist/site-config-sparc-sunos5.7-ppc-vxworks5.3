@@ -1,0 +1,139 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+#==========================================================
+#include $(SITEDEFSHOME)/site.common
+include $(SITEDEFSHOME)/sites/site.gcc
+
+export YAM_OS = vx
+#===========================================
+#CC_PATH = /opt/wind-1.0-ppc
+#WIND_BASE = /opt/wind-1.0.1-ppc
+
+# need to export the following since wtxtcl needs it
+export WIND_BASE	:= /dsw/wind-2.0.2-ppc
+export WIND_HOST_TYPE   :=  sun4-solaris2
+
+#VX_VW_BASE= $(WIND_BASE)/host
+WIND_BIN = $(WIND_BASE)/host/$(WIND_HOST_TYPE)/powerpc-wrs-vxworks/bin
+export GCC_EXEC_PREFIX = $(WIND_BASE)/host/$(WIND_HOST_TYPE)/lib/gcc-lib/
+
+# needed so that wtxtcl can be found
+export PATH          := $(PATH):$(WIND_BASE)/host/$(WIND_HOST_TYPE)/bin
+
+# needed for munching C++ code
+export NM           := $(WIND_BIN)/nm
+export WTXTCL       := $(WIND_BASE)/host/$(WIND_HOST_TYPE)/bin/wtxtcl \
+			     $(WIND_BASE)/host/src/hutils/munch.tcl \
+                             -asm ppc
+
+#===========================================
+# C compiler and flags for the native target
+
+# need to do this so that the cross-compiler gcc can find cpp. For some
+# reason GCC_EXEC_PREFIX is not working properly to solve this problem
+# Also needed to do this so that "as" could be found
+export PATH		:= $(PATH):$(GCC_EXEC_PREFIX)powerpc-wrs-vxworks/cygnus-2.7.2-960126:$(WIND_BASE)/host/$(WIND_HOST_TYPE)/powerpc-wrs-vxworks/bin
+
+export CC		= $(WIND_BIN)/gcc -ansi -pedantic
+export CC_DEPEND_FLAG	= -MM
+export CC_INCLUDES	:= -I$(YAM_ROOT)/include \
+		-I$(WIND_BASE)/target/h \
+		-I$(WIND_BASE)/host/include
+
+#		-I$(WIND_BASE)/host/src/gnu/gcc/ginclude \
+#		-I$(WIND_BASE)/host/src/gnu/newlib/libc/include
+
+export CC_DEFINES	= -DVXWORKS -DCPU=PPC603 -Dppc
+export CC_WARNINGS	= -Wall -Wmissing-prototypes -Waggregate-return
+#export CC_OPTIMIZATION	= -ggdb3
+export CC_LIBS		:= $(GCC_EXEC_PREFIX)powerpc-wrs-vxworks/cygnus-2.7.2-960126/libgcc.a
+
+#export CC_COMPILE_FLAGS	= $(CC_OPTIMIZATION) $(CC_DEFINES) \
+#			   $(CC_WARNINGS) $(CC_INCLUDES)
+#export CC_LINK_FLAGS	= $(CC_OPTIMIZATION) -L$(YAM_ROOT)/lib/$(YAM_TARGET)
+
+#CC_OPTIM_CFLAGS	= -ggdb3
+#SYS_INCLUDE_FLAGS	=
+#export GCC_EXEC_PREFIX =
+
+#==========================================================
+# C++ compiler and flags for the native target
+
+#gnuPath = $(RTIHOME)/gnu/sparcSol2-m68k
+gnuPath = $(WIND_BASE)/host/$(WIND_HOST_TYPE)/powerpc-wrs-vxworks
+gnuBin = $(gnuPath)/bin
+#RTI_GCC_EXEC_PREFIX = $(gnuPath)/lib/gcc-lib/
+RTI_GCC_EXEC_PREFIX = $(WIND_BASE)/host/$(WIND_HOST_TYPE)/lib/gcc-lib
+
+export CPLUSPLUS = $(CC) -B$(RTI_GCC_EXEC_PREFIX) -mcpu=603
+export CPLUSPLUS_DEPEND_FLAG	= $(CC_DEPEND_FLAG)
+#export CPLUSPLUS_INCLUDES	:= $(CC_INCLUDES) -I$(YAM_ROOT)/include/STL
+export CPLUSPLUS_INCLUDES	:= $(CC_INCLUDES)
+export CPLUSPLUS_DEFINES	= $(CC_DEFINES) -fno-builtin -fno-for-scope \
+                                   -nostdinc -c
+
+export CPLUSPLUS_WARNINGS	= $(CC_WARNINGS) \
+	-Woverloaded-virtual -Wno-unused -Wno-aggregate-return -Wconversion
+#export CPLUSPLUS_OPTIMIZATION	= -g -O3
+#-fno-default-inline -finline-functions
+export CPLUSPLUS_LIBS		:= $(CC_LIBS)
+#    /opt/rti/gnu/sparcSol2-m68k/lib/gcc-lib/sparcSol2-m68k/2.6.2/libgcc.a
+
+#export CPLUSPLUS_COMPILE_FLAGS = $(CPLUSPLUS_OPTIMIZATION) $(CPLUSPLUS_DEFINES) \
+#				    $(CPLUSPLUS_WARNINGS) $(CPLUSPLUS_INCLUDES)
+#export CPLUSPLUS_LINK_FLAGS    = -g -L$(YAM_ROOT)/lib/$(YAM_TARGET)
+
+
+#CPLUSPLUS_OPTIM_CFLAGS = -DSUNOS5
+
+#==========================================================
+export AR	= $(WIND_BIN)/ar
+export LD	= $(WIND_BIN)/ld -r
+export RANLIB	= $(WIND_BIN)/ranlib
+
+#==========================================================
+# for TCL
+export TCL_INCDIR       = -I$(WIND_BASE)/host/include
+
+# for TK
+export HAVE_TK		=
+export HAVE_TIX		=
+
+#==========================================================
+# for TRAMEL
+export HAVE_TRAMEL	= false
+export TRAMEL_INCDIR    = -I/proj/proto/v2.2/ppc-vxworks/include
+#export TRAMEL_LIBDIR    = /proj/proto/v2.2/tramel/ppc-vxworks5.2
+export TRAMEL_LIBDIR    = /proj/proto/v2.2/ppc-vxworks/lib
+export TRAMEL_LIBS	= -L$(TRAMEL_LIBDIR) -ltramel
+
+#==========================================================
+# for RTI's Stethoscope
+export HAVE_SCOPE	= false
+STETHOSCOPEHOME = /opt/rti-5.0c-ppc/scope.5.0c
+RTILIBHOME = /opt/rti-5.0c-ppc/rtilib.3.7h
+export SCOPE_INCDIR	= -I$(STETHOSCOPEHOME)/include/$(RTI_OS) \
+				-I$(STETHOSCOPEHOME)/include/share
+export SCOPE_LIBS	= $(STETHOSCOPEHOME)/lib/$(RTI_TARGET)/libscope.so \
+			      $(RTILIBHOME)/lib/$(RTI_TARGET)/libutilsip.so
+
+
+#==========================================================
+# for RTI's NDDS
+export HAVE_NDDS	= false
+
+#==========================================================
+# for Matlab
+export HAVE_MATLAB	= false
+export HAVE_SIMULINK    = false
+export HAVE_RTW         = false
+export MATLAB_INCDIR    = -I$(MATLAB)/extern/include
+export SIMULINK_INCDIR  = $(MATLAB_INCDIR) -I$(MATLAB)/simulink/include
+export RTW_INCDIR       = $(SIMULINK_INCDIR) -I$(MATLAB)/rtw/c/libsrc -I$(MATLAB)/rtw/c/src
+export MATLAB_LIBDIR    =
+export MATLAB_LIBS      =

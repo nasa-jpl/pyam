@@ -1,0 +1,78 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+#==========================================================
+# use gcc version
+export USE_GCC272 = false
+export USE_GCC295 = true
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+#==========================================================
+#include $(SITEDEFSHOME)/site.common
+# site.gcc references gcc 2.95.1, if CC or CPLUSPLUS is not defined.
+# the TPS version of gcc is defined in site.local
+include $(SITEDEFSHOME)/sites/site.gcc
+
+#==========================================================
+export X11_HOME=/usr/openwin
+OPENWINHOME = $(X11_HOME)
+export OPENWINHOME
+export X11_LIBS = -L$(X11_HOME)/lib -lX11
+export X11_INCDIR       = -I/usr/openwin/include
+
+export CC_INCLUDES += -I$(X11_HOME)/include
+
+#==========================================================
+# for TCL
+export TCL_VERSION      = 7.4
+ifndef TCL_SRCDIR
+  export TCL_SRCDIR       = /home/gvaughan/hss/zipsim7/tcl7
+endif
+ifndef TCL_LIBDIR
+  export TCL_LIBDIR       = /home/gvaughan/hss/zipsim7/tcl7
+endif
+export TCL_INCDIR       = -DHSS_MT_TCL -I$(TCL_SRCDIR) $(FWRITABLE_STRINGS_OPT)
+export TCL_LIBS         = $(TCL_LIBDIR)/tcl7.oa -L$(YAM_ROOT)/lib/$(YAM_TARGET) \
+                                -lMtclStubs -lm
+export TCL_LIBX         = -L$(YAM_ROOT)/lib/$(YAM_TARGET) \
+                                -lMtclStubs -lm
+
+# for TK
+export TK_VERSION       = 4.0
+ifndef TK_SRCDIR
+  export TK_SRCDIR      = /home/gvaughan/hss/zipsim7/tk4
+endif
+ifndef TK_LIBDIR
+  export TK_LIBDIR      = /home/gvaughan/hss/zipsim7/tk4
+endif
+export TK_INCDIR        = $(TCL_INCDIR) -I$(TK_SRCDIR)
+export TK_LIBS          = $(TK_LIBDIR)/tk4.oa -L/usr/openwin/lib -lX11 \
+                                $(TCL_LIBS)
+
+# for TIX
+export TIX_LIBDIR       = $(TCL_LIBDIR)
+export TIX_INCDIR       = $(TK_INCDIR) -I$(YAM_ROOT)/include
+export TIX_LIBS         = -L$(TIX_LIBDIR) $(YAM_ROOT)/lib/$(YAM_TARGET)/libtix4140.a $(TK_LIBS)
+
+#export TIX_LIBDIR       = $(TCL_LIBDIR)
+#export TIX_INCDIR       = $(TK_INCDIR) -I/home/atbe/pkgs/include
+#export TIX_LIBS         = -L$(TIX_LIBDIR) /home/atbe/pkgs/lib/sparc-sunos5/libtix4.1.a $(TK_LIBS)
+
+#==========================================================
+# Motif flags
+export MOTIF_LIBS = -L/usr/dt/lib -R/usr/dt/lib -lXm
+export MOTIF_INCDIR = -I/usr/dt/include
+
+#==========================================================
+# for Matlab
+export MATLAB_LIBS	= -L$(MATLAB)/extern/lib/sol2
+
+#==========================================================
+# for Perl
+export PERL		= /afs/jpl.nasa.gov/ets/released/sun4x_55/ets/bin/perl5
+
+#==========================================================
+export M4 = /afs/jpl.nasa.gov/tool/released/sun4x_55/ets/bin/m4

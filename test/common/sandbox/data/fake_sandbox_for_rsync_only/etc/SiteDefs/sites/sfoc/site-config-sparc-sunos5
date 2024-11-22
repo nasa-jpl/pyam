@@ -1,0 +1,98 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+#==========================================================
+# use gcc version
+export USE_GCC272 = false
+export USE_GCC295 = true
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+export TPSVER	?= V12.1
+export ETS	:= /TPS/$(TPSVER)
+
+# need so gperf can find libstdc++.so library at run-time for css-sim
+export LD_LIBRARY_PATH  := $(LD_LIBRARY_PATH):$(ETS)/lib
+
+#==========================================================
+#include $(SITEDEFSHOME)/site.common
+
+include $(SITEDEFSHOME)/sites/site.gcc
+# this file contains rules for "gcc" based compilations.
+# It can be included by any site-config file for gcc based compilation
+
+#==========================================================
+export X11_HOME=/usr/openwin
+export X11_INCDIR = -I/usr/openwin/include
+export X11_LIBS = -L$(X11_HOME)/lib -lX11
+
+#==========================================================
+# C++ compiler and flags for the native target
+
+export CC_INCLUDES += -I$(X11_HOME)/include
+#export CC_LIBS		+= -L$(X11_HOME)/lib -Xlinker --rpath /usr/openwin/lib
+export CC_LIBS		+= -L$(X11_HOME)/lib
+
+export LIBSTDCPP	= -L$(ETS)/lib -lstdc++
+
+#==========================================================
+# are we building our own shared libraries?
+export BUILDING_SHARED_LIBS = true
+
+ifeq ($(BUILDING_SHARED_LIBS),true)
+  CC_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  CPLUSPLUS_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+
+  GCC_EXEC_PREFIX = $(ETS)/lib/gcc-lib/sparc-sun-solaris2.7/3.1
+  LD_SHARED = $(LD) -G -L$(YAM_ROOT)/lib/$(YAM_NATIVE) -L$(GCC_EXEC_PREFIX)
+  export LD_SHARED
+  CC_EXTRA_SHLIB = -lgcc
+  export CC_EXTRA_SHLIB
+endif
+
+#==========================================================
+# turn on/off the use of Tcl/Tk 8.0
+USE_TCLTK80 = true
+
+ifeq ($(USE_TCLTK80),true)
+  CC_DEFINES += -DUSING_TCLTK80
+  CPLUSPLUS_DEFINES += -DUSING_TCLTK80
+endif
+
+#==========================================================
+export TCL_VERSION      = 8.3
+export TCL_LIBDIR       = $(ETS)/lib
+export TCL_INCDIR       = -I$(ETS)/include
+export TCL_LIBS         = -ltcl8.3 -lm
+TCLSH			:= $(ETS)/bin/tclsh
+
+# for TK
+export TK_VERSION       = 8.3
+#export TK_SRCDIR        = $(YAM_ROOT)/../tk4
+export TK_LIBDIR        = $(TCL_LIBDIR)
+export TK_INCDIR        = $(TCL_INCDIR)
+export TK_LIBS          = -ltk8.3 -lX11 $(TCL_LIBS)
+
+# for TIX
+export TIX_LIBDIR       = $(TCL_LIBDIR)
+export TIX_INCDIR       = $(TK_INCDIR)
+export TIX_LIBS         = -L$(TIX_LIBDIR) -ltix8.2 $(TK_LIBS)
+
+#==========================================================
+# Motif flags
+export MOTIF_LIBS = -L/usr/dt/lib -R/usr/dt/lib -lXm
+export MOTIF_INCDIR = -I/usr/dt/include
+
+#==========================================================
+# for Matlab
+export MATLAB_LIBS	= -L$(MATLAB)/extern/lib/sol2
+
+#==========================================================
+# for Perl
+export PERL		= $(ETS)/bin/per
+
+#==========================================================
+#export M4 = /afs/jpl.nasa.gov/tool/released/sun4x_55/ets/bin/m4
+export M4 = $(ETS)/bin/m4

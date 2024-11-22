@@ -1,0 +1,253 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+USE_GCC295            = true
+
+#==========================================================
+# using egcs and not gcc 2.95 for Linux
+ifeq ($(USE_GCC295),)
+  USE_GCC295	      = false
+endif
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/telerobotics/site.local
+
+#HAVE_MOTIF = false
+USE_SITE_TERRAIN = false
+
+# set up StethoScope values
+SCOPEGCCEXT=
+STETHOSCOPEHOME=$(RTIHOME)/scope.5.3c-linux2.2
+RTILIBHOME=$(RTIHOME)/rtilib.4.0g-linux2.2
+#STETHOSCOPEHOME=$(RTIHOME)/scope.6.0e-linux
+#RTILIBHOME=$(RTIHOME)/rtilib.4.1f-linux
+
+#==========================================================
+#include $(SITEDEFSHOME)/site.common
+include $(SITEDEFSHOME)/sites/site.gcc
+
+CC		= /usr/bin/gcc
+CPLUSPLUS	= /usr/bin/gcc
+F77		= /usr/bin/g77
+#LIBF77		= -lg2c
+LINKER_F77      := $(F77)
+
+#LIBSTDCPP = -L/home/atbe/pkgs/lib/i486-linux -lstdc++
+LIBSTDCPP	= -lstdc++
+export LIBSTDCPP
+
+#==========================================================
+# profiling options
+#_PROF			:= true
+ifeq ($(_PROF),true)
+  CC_COMPILE_FLAGS	+= -pg
+  CPLUSPLUS_COMPILE_FLAGS += -pg
+  CC_STATIC_LINK_FLAGS		+= -pg
+  CPLUSPLUS_STATIC_LINK_FLAGS  += -pg
+  CPLUSPLUS_LIBS  += -pg
+  CC_LIBS  += -pg
+  BUILDING_SHARED_LIBS	:= false
+else
+  CC_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  F77_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  CPLUSPLUS_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+endif
+
+
+# are we building our own shared libraries?
+ifeq ($(BUILDING_SHARED_LIBS),)
+  BUILDING_SHARED_LIBS = true
+endif
+export BUILDING_SHARED_LIBS
+
+
+ifeq ($(BUILDING_SHARED_LIBS),true)
+  CC_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  CPLUSPLUS_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+#  GCC_EXEC_PREFIX = /usr/lib/gcc-lib/i386-redhat-linux/2.96
+#  GCC_EXEC_PREFIX = /usr/lib/gcc-lib/i386-redhat-linux/3.2
+#  GCC_EXEC_PREFIX = /usr/lib/gcc-lib/i586-mandrake-linux/2.95.3
+#  LD_SHARED = $(LD) -G -L$(YAM_ROOT)/lib/$(YAM_NATIVE)-shared  -L$(GCC_EXEC_PREFIX)
+  export LD_SHARED
+  LD_SHARED = $(CC) -shared
+#  CC_EXTRA_SHLIB = -lgcc
+  export CC_EXTRA_SHLIB
+endif
+
+#CPLUSPLUS_COMPILE_FLAGS += -I/usr/include -I/home/atbe/pkgs/lib/i486-linux/g++-include
+#CPLUSPLUS_COMPILE_FLAGS += -I/usr/include -I/usr/include/g++
+
+#==========================================================
+ifneq ($(USE_SHARED_LIBS),false)
+# SHARED_LIBDIR = /usr/lib
+ export SHARED_LIBDIR = .
+# CC_LINK_FLAGS += -L$(SHARED_LIBDIR) -Xlinker -rpath-link -Xlinker $(YAM_ROOT)/lib/$(YAM_NATIVE)
+ CC_LINK_FLAGS += -L$(SHARED_LIBDIR)
+# CPLUSPLUS_LINK_FLAGS += -L$(SHARED_LIBDIR) -Xlinker -rpath-link -Xlinker $(YAM_ROOT)/lib/$(YAM_NATIVE)
+ CPLUSPLUS_LINK_FLAGS += -L$(SHARED_LIBDIR)
+endif
+
+
+#==========================================================
+# for X11
+export X11_INCDIR       = -I/usr/X11R6/include
+export X11_LIBDIR       = /usr/X11R6/lib
+
+#==========================================================
+  # for TCL
+  TCLSH			:= /usr/bin/tclsh
+  export HAVE_TCL		= true
+#  export TCL_LIBDIR	= /home/atbe/pkgs/lib/i486-linux-shared
+#  export TCL_INCDIR	= -I/home/atbe/pkgs/include/tcl8.0
+#  export TCL_LIBS	= -L$(TCL_LIBDIR) -ltcl8.0 -ldl -lm
+  export TCL_LIBDIR	= /usr/lib
+  export TCL_INCDIR	= -I/usr/include
+  export TCL_LIBS	= -ltcl8.3 -ldl -lm
+
+  # for TK
+  export HAVE_TK		= true
+#  export TK_LIBDIR	= $(TCL_LIBDIR)
+#  export TK_INCDIR	= $(TCL_INCDIR)
+#  export TK_LIBS	= -L$(TK_LIBDIR) -ltk8.0 -L$(X11_LIBDIR) -lX11 $(TCL_LIBS)
+  export TK_LIBDIR	=
+  export TK_INCDIR	=
+  export TK_LIBS	= -ltk8.3 -L$(X11_LIBDIR) -lX11 $(TCL_LIBS)
+
+  # for TIX
+  export HAVE_TIX       = true
+#  export TIX_LIBDIR     = $(TCL_LIBDIR)
+  export TIX_INCDIR     = -I/home/atbe/pkgs/include/tix8.2/generic
+#  export TIX_LIBS       = -L$(TIX_LIBDIR) -ltix4.1.8.0 $(TK_LIBS)
+  export TIX_LIBDIR	=
+#  export TIX_INCDIR	= -I/home/atbe/pkgs/include/tix8.2/generic
+#  export TIX_LIBS       =  -ltix4.1.8.3 $(TK_LIBS)
+  export TIX_LIBS       =  -ltix $(TK_LIBS)
+#  export TIX_LIBS       =  -ltix $(TK_LIBS)
+
+#==========================================================
+# Motif flags (using LessTif)
+#export MOTIF_LIBS = -L/usr/X11R6/lib -L/usr/X11R6/LessTif/Motif2.0/lib -lXm
+export MOTIF_LIBS = -L/usr/X11R6/lib  -lXm -lXp
+#export MOTIF_INCDIR = -I/usr/X11R6/LessTif/Motif2.0/include
+export MOTIF_INCDIR = -I/usr/X11R6/include
+
+#==========================================================
+# for Mesa
+MESA_DIR = /home/atbe/pkgs/src/Mesa/Mesa-3.0-linux
+
+#==========================================================
+# Doxygen flags
+export HAVE_DOXYGEN = true
+#export DOXYGEN	    = /usr/bin/doxygen
+export DOXYGEN	    = /home/atbe/pkgs/src/doxygen/doxygen-1.3.3-linux/bin/doxygen -d Validate
+#==========================================================
+# for OpenInventor
+export HAVE_IV		= true
+#IV_VERSION		= 2.1.5-7
+#export IV_INCDIR	= /home/atbe/pkgs/include/Inventor-$(IV_VERSION)
+export IV_INCDIR	=  /usr/include
+export IV_CFLAGS	=
+
+#IV_LIB_DIR		= /home/atbe/pkgs/lib/$(YAM_TARGET)
+IV_LIB_DIR		= /usr/lib
+#export IV_LIB		= -L$(IV_LIB_DIR) -lInventor-$(IV_VERSION)
+#export IV_XT_LIB	= -lInventorXt-$(IV_VERSION)
+#export IV_FL_LIB	= -lFL-$(IV_VERSION)
+#export IV_IMG_LIB	= -limage-$(IV_VERSION)
+export IV_LIB		= -L$(IV_LIB_DIR) -lInventor
+export IV_XT_LIB	= -lInventorXt
+export IV_FL_LIB	=
+export IV_IMG_LIB	=
+export JPEG_LIBS	= -ljpeg
+
+export GL_LIBS		= -lGL -lGLU
+
+export IV_LIBS		= $(IV_XT_LIB) $(IV_LIB) $(IV_FL_LIB) \
+			  $(IV_IMG_LIB) $(JPEG_LIBS) $(GL_LIBS)
+
+#==========================================================
+# for SWIG
+#SWIG	:= /usr/bin/swig
+#SWIG	:= /home/atbe/pkgs/src/SWIG/SWIG-1.3.16-i486-linux/swig
+SWIG	:= /home/atbe/pkgs/i486-linux/stow/SWIG1.3.18/bin/swig
+
+#==========================================================
+# for MSF
+msf_projects=/home/atbe/pkgs/src
+msf_packages=${msf_projects}/MSF
+msf_archname=ix86-linux-gcc3.2-glibc2.3
+
+export RTI_HOME ?= ${msf_projects}/hla/rti/RTI_latest
+export RTI_BUILD_TYPE ?= ${msf_archname}
+# export RTI_RID_FILE ?= ${YAM_ROOT}/src/MsfRoamsComponent/RTI.rid
+export MSF_HOME ?= ${msf_packages}/MSF_latest
+export MSF_MODELS_PATH ?= ${YAM_ROOT}/lib/AmesMSF_3DModels
+export MSF_FEDFILE_PATH ?= ${MSF_HOME}/COMv2
+export VR_ROOT ?= ${msf_packages}/Viz_latest
+export QTDIR ?= ${msf_packages}/${msf_archname}/qt-x11-free_latest
+export IVROOT ?= ${msf_packages}/${msf_archname}/open-inventor_latest
+
+#==========================================================
+# for TRAMEL
+export HAVE_TRAMEL	= false
+export TRAMEL_INCDIR	=
+export TRAMEL_LIBDIR	=
+export TRAMEL_LIBS	=
+
+#==========================================================
+# for RTI's Stethoscope
+SCOPE_LIBS += -lpthread
+#SCOPE_LIBS := $(STETHOSCOPEHOME)/lib/$(RTI_TARGET)$(SCOPEGCCEXT)/libscopez.a \
+#                $(RTILIBHOME)/lib/$(RTI_TARGET)$(SCOPEGCCEXT)/libutilsipz.a -lpthread
+
+#==========================================================
+# for RTI's NDDS
+export HAVE_NDDS	= false
+export NDDS_INCDIR	=
+export NDDS_LIBS	=
+
+#==========================================================
+# for Matlab
+export HAVE_MATLAB	= false
+export HAVE_SIMULINK    = false
+export HAVE_RTW         = false
+export MATLAB		=
+export MATLAB_INCDIR    = -I$(MATLAB)/extern/include
+export SIMULINK_INCDIR  = $(MATLAB_INCDIR) -I$(MATLAB)/simulink/include
+export RTW_INCDIR       = $(SIMULINK_INCDIR) -I$(MATLAB)/rtw/c/libsrc -I$(MATLAB)/rtw/c/src
+export MATLAB_LIBDIR    =
+export MATLAB_LIBS	=
+#==========================================================
+# for libxml2 (XML parser library - settings obtained
+# from `xml2-config --cflags` & `xml2-config --libs` )
+export LIBXML2_CFLAGS = -I/usr/include/libxml2
+export LIBXML2_LIBS = -L/usr/lib -lxml2 -lz -lm
+
+#==========================================================
+USE_PURIFY = false
+
+ifeq ($(USE_PURIFY),true)
+
+# TESTRTDIR=/dsw/PurifyPlusForLinux.v2002R2
+TESTRTDIR=/dsw/PurifyPlusForLinux.v2002R2/releases/PurifyPlusForLinux.v2002R2
+
+ATLTGT=$(TESTRTDIR)/targets/clinuxgnu
+ATCDIR=$(TESTRTDIR)/bin/intel/linux_redhat
+LD_LIBRARY_PATH := $(TESTRTDIR)/lib/intel/linux_redhat:$(TESTRTDIR)/bin/intel/linux_redhat:$(LD_LIBRARY_PATH)
+#PATH:=/home/atbe/pkgs/i486-linux/bin:$(PATH):$(TESTRTDIR)/bin/intel/linux_redhat:$(ATLTGT)/cmd
+PATH:=$(PATH):$(TESTRTDIR)/bin/intel/linux_redhat:$(ATLTGT)/cmd
+
+# PURIFY=$(TESTRTDIR)/releases/PurifyPlusForLinux.v2002R2/bin/intel/linux_redhat/attolccp
+PURIFY=$(ATLTGT)/cmd/attolcc
+
+export TESTRTDIR
+export ATLTGT
+export ATCDIR
+export LD_LIBRARY_PATH
+export PATH
+GCCDIR = /usr
+CC = $(PURIFY) -- $(GCCDIR)/bin/gcc -g
+CPLUSPLUS := $(CC)
+
+endif

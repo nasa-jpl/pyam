@@ -1,0 +1,137 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+USE_GCC295 = false
+
+HAVE_SCOPE = false
+
+CC_VERSION = 6.0
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+HAVE_TRAMEL		= false
+export HAVE_MATHEMATCA	= false
+export HAVE_TMATH	= false
+
+#==========================================================
+SUNPRO_DIR = /tps/SUNWspro/WS6
+SUNPRO_FILES_DIR = $(SUNPRO_DIR)
+AR = /tps/bin/ar
+
+LIBGCC = -L/home/atbe/pkgs/lib/gcc-lib/sparc-sun-solaris2.7/2.95.2 -lgcc
+export LIBGCC
+LIBSTDCPP = -L$(SUNPRO_FILES_DIR)/lib -liostream
+export LIBSTDCPP
+
+# Add a -v flag for verbosity
+CC = $(SUNPRO_DIR)/bin/cc
+CPLUSPLUS := $(SUNPRO_DIR)/bin/CC
+F77 = $(SUNPRO_DIR)/bin/f77
+LIBF77 = -L$(SUNPRO_FILES_DIR)/lib -lM77 -lF77 -lsunmath
+
+#==========================================================
+# are we building our own shared libraries?
+ifeq ($(BUILDING_SHARED_LIBS),)
+  BUILDING_SHARED_LIBS = true
+endif
+export BUILDING_SHARED_LIBS
+
+CC_WARNINGS =
+CPLUSPLUS_WARNINGS =
+
+CPUSPLUS_EXCEPTIONS_FLAG = -features=except
+
+CC_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG) -I$(SUNPRO_FILES_DIR)/include/CCios
+CPLUSPLUS_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG) -I$(SUNPRO_FILES_DIR)/include/CCios
+CPLUSPLUS_COMPILE_FLAGS +=  -instances=static
+
+LD_SHARED = $(LD) -G -L$(YAM_ROOT)/lib/$(YAM_NATIVE)
+CC_DEPEND_FLAG  := -xM
+CPLUSPLUS_DEPEND_FLAG  := $(CC_DEPEND_FLAG)
+
+export CC_EXTRA_SHLIB
+
+ifeq ($(BUILDING_SHARED_LIBS),true)
+  export LD_SHARED
+endif
+
+# Add a -w flag to suppress warnings
+CC_OPTIMIZATION = -xO3 -g
+CPLUSPLUS_OPTIMIZATION = -O3 -g
+
+ifeq ($(CC_VERSION),5.0)
+  CC_OPTIMIZATION += -native
+  CPLUSPLUS_OPTIMIZATION +=  -native
+  CPLUSPLUS_COMPILE_FLAGS += -template=wholeclass
+endif
+
+#==========================================================
+# turn on/off the use of Tcl/Tk 8.0
+USE_TCLTK80 = true
+
+CPLUSPLUS_DEFINES       += $(CC_DEFINES)
+ifeq ($(USE_TCLTK80),true)
+  CC_DEFINES += -DUSING_TCLTK80
+  CPLUSPLUS_DEFINES += -DUSING_TCLTK80
+endif
+
+GCC_EXEC_PREFIX = /home/atbe/pkgs/lib/gcc-lib/sparc-sun-solaris2.7/2.95.2
+LIBGCC = -L$(GCC_EXEC_PREFIX) -lgcc
+
+ifneq ($(USE_SHARED_LIBS),false)
+ export SHARED_LIBDIR = /home/atbe/pkgs/lib/$(YAM_TARGET)-shared
+ CC_LINK_FLAGS += -L$(SHARED_LIBDIR) -R$(SHARED_LIBDIR) -L$(SUNPRO_FILES_DIR)/lib -I$(SUNPRO_FILES_DIR)/include/CCios
+ CPLUSPLUS_LINK_FLAGS += -L$(SHARED_LIBDIR) -R$(SHARED_LIBDIR) -L$(SUNPRO_FILES_DIR)/lib
+endif
+
+#==========================================================
+# for X11
+export X11_INCDIR       = -I/usr/openwin/include
+
+#==========================================================
+ifeq ($(USE_TCLTK80),true)
+# for TCL
+  export HAVE_TCL		= true
+  export TCL_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+  export TCL_INCDIR	= -I/home/atbe/pkgs/include/tcl8.0
+  #export TCL_INCDIR	= -I/home/atbe1/users/jain/Test/telerobotics/tcl8.0
+  export TCL_LIBS		= -L$(TCL_LIBDIR) -ltcl8.0 -ldl -lm
+
+  # for TK
+  export HAVE_TK		= true
+  export TK_LIBDIR	= $(TCL_LIBDIR)
+  export TK_INCDIR	= $(TCL_INCDIR) -I/home/atbe/pkgs/include/tk8.0
+  export TK_LIBS		= -L$(TK_LIBDIR) -ltk8.0 -lX11 $(TCL_LIBS)
+
+  # for TIX
+  export HAVE_TIX		= true
+  export TIX_LIBDIR	= $(TCL_LIBDIR)
+  export TIX_INCDIR	= $(TK_INCDIR) -I/home/atbe/pkgs/include/tix4.1
+  export TIX_LIBS		= -L$(TIX_LIBDIR) -ltix4.1.8.0 $(TK_LIBS)
+endif
+
+#==========================================================
+# Motif flags
+export MOTIF_LIBS = -L/usr/dt/lib -R/usr/dt/lib -lXm
+export MOTIF_INCDIR = -I/usr/dt/include
+
+#==========================================================
+#
+HAVE_TRAMEL = false
+
+#==========================================================
+# this extra library is needed for using with the sparcSol2.5 libraries
+HAVE_NDDS = false
+
+#==========================================================
+# the currently available Scope library appears to be gcc compatible only
+HAVE_SCOPE=false

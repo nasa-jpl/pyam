@@ -1,0 +1,56 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-x86_64-fedora11-linux
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+
+
+
+#================================================
+HAVE_LCM := true
+LCM_INCS := -I/home/dlab/pkgs/${YAM_TARGET}/stow/lcm-trunk.2010.06.07/include
+LCM_LIBS := -L/home/dlab/pkgs/${YAM_TARGET}/stow/lcm-trunk.2010.06.07/lib -llcm
+
+#================================================
+HAVE_HDF5       := true
+HDF5_DIR       := /home/dlab/pkgs/$(YAM_TARGET)/stow/hdf5-1.8.4-patch1
+#HDF5_DIR        := /usr
+HDF5_LIBS       := -L$(HDF5_DIR)/lib -lhdf5_cpp -lhdf5
+HDF5_INCDIR     := $(HDF5_DIR)/include
+
+#================================================
+# This version of Boost is built with multithread support.
+HAVE_BOOST := true
+BOOST_DIR := /home/dlab/pkgs/${YAM_TARGET}/stow/boost_1_44_0-with_boostlog
+BOOST_INCS := -I$(BOOST_DIR)/include
+
+HAVE_BOOST_LOG := true
+BOOST_LOG_LIBS := -L$(BOOST_DIR)/lib -lboost_log -lboost_thread -lboost_filesystem -lboost_system
+
+HAVE_BOOST_REGEX := true
+BOOST_REGEX_LIBS := -L$(BOOST_DIR)/lib -lboost_regex
+
+#================================================
+HAVE_OGRE := true
+OGRE_DIR := /home/dlab/pkgs/$(YAM_TARGET)/stow/ogre-1.7.1
+OGRE_CFLAGS := -DOGRE_DOUBLE_PRECISION=1 -I$(OGRE_DIR)/include/OGRE
+OGRE_LIBS := -L$(OGRE_DIR)/lib -lOgreMain
+
+#================================================
+HAVE_OIS := true
+OIS_CFLAGS := -I/home/dlab/pkgs/x86_64-fedora13-linux/stow/ois-1.2.0/include/OIS
+OIS_LIBS := -L/home/dlab/pkgs/x86_64-fedora13-linux/stow/ois-1.2.0/lib -lOIS
+
+#================================================
+HAVE_COIN	:= false

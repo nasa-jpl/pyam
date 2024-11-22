@@ -1,0 +1,58 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-i486-fedora5-linux
+
+
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+
+##SOXT_CFLAGS = -I/home/atbe/pkgs/i486-fedora6-linux/stow/SoXt-1.2.2/include
+##SOXT_LIBS = -L/home/atbe/pkgs/i486-fedora6-linux/lib -lSoXt
+
+export GL_LIBS          = -Wl,-Bdynamic  -lGLU -lGL
+
+
+# This enables the new DT_GNU_HASH hashstyle linker option to allow faster
+# loading of dynamic libraries at run time
+# See http://gentoo-wiki.org/HOWTO_Hashstyle
+# Verify that this works by running 'readelf -a' on shared library and
+#   grepping for GNU_HASH
+CC_SHARED_LINK_FLAGS += -Wl,--hash-style=both
+
+MOTIF_LIBS	 :=  -L/usr/lib  -lXm
+
+#==========================================================
+COIN_DIR     := /home/dlab/pkgs/$(YAM_TARGET)/stow/Coin-2.5
+COIN_INC     :=  \
+                -I$(COIN_DIR)/include \
+                -D_REENTRANT -DCOIN3D
+
+COIN_LIBS       := \
+                -L$(COIN_DIR)/lib -lCoin  \
+                -L/home/atbe/pkgs/$(YAM_TARGET)/stow/simage-1.6.1/lib -lsimage
+
+#==========================================================
+#
+# Spice installation
+#
+CSPICE_DIR	:= /home/dlab/pkgs/src/spice/cspice-v62-32bit
+
+#================================================
+HAVE_HDF5	:= true
+HDF5_DIR	:= /usr
+HDF5_LIBS       := -L$(HDF5_DIR)/lib -lhdf5_cpp -lhdf5
+HDF5_INCDIR	:= $(HDF5_DIR)/include
+
+
+HAVE_COINSHADERS   := true

@@ -1,0 +1,103 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+HAVE_G77 = false
+
+#==========================================================
+#include $(SITEDEFSHOME)/site.common
+include $(SITEDEFSHOME)/sites/site.gcc
+
+#===========================================
+# C compiler and flags for the native target
+
+export CC		= /home/atbe/pkgs/bin/mips-irix5/gcc
+export CC_DEPEND_FLAG	= -M
+
+export CC_WARNINGS	=
+export CC_OPTIMIZATION	= -O3
+
+LIBSTDCPP = -L/home/atbe/pkgs/lib/mips-irix5 -lstdc++
+export LIBSTDCPP
+
+#==========================================================
+# C++ compiler and flags for the native target
+
+#export CPLUSPLUS = CC
+export CPLUSPLUS = /home/atbe/pkgs/bin/mips-irix5/gcc
+export CPLUSPLUS_DEPEND_FLAG	= $(CC_DEPEND_FLAG)
+export CPLUSPLUS_INCLUDES	:= $(CC_INCLUDES)
+export CPLUSPLUS_DEFINES	= $(CC_DEFINES)
+export CPLUSPLUS_WARNINGS	= $(CC_WARNINGS)
+export CPLUSPLUS_OPTIMIZATION	= -O3
+#export CPLUSPLUS_LIBS		:= $(CC_LIBS)
+#export CPLUSPLUS_LIBS		= $(CC_LIBS) -Wl,-Bstatic -lstdc++
+
+#==========================================================
+# are we building our own shared libraries?
+ifeq ($(BUILDING_SHARED_LIBS),)
+  BUILDING_SHARED_LIBS = true
+endif
+export BUILDING_SHARED_LIBS
+
+ifeq ($(BUILDING_SHARED_LIBS),true)
+#  CC_COMPILE_FLAGS +=
+#  CPLUSPLUS_COMPILE_FLAGS +=
+  GCC_EXEC_PREFIX = /home/atbe/pkgs/lib/mips-irix5/gcc-lib/mips-sgi-irix6.2/2.8.1
+  LD_SHARED = $(LD) -n32 -shared -L$(YAM_ROOT)/lib/$(YAM_NATIVE) -L$(GCC_EXEC_PREFIX)
+  export LD_SHARED
+endif
+
+#==========================================================
+# are we building with third party shared libraries?
+CC_DEFINES += -DUSING_TCLTK80
+CPLUSPLUS_DEFINES += -DUSING_TCLTK80
+
+ifneq ($(USE_SHARED_LIBS),false)
+ SHARED_LIBDIR = /home/atbe/pkgs/lib/$(YAM_TARGET)-shared
+ CC_LINK_FLAGS += -L$(SHARED_LIBDIR) -rpath $(SHARED_LIBDIR) -rpath $(YAM_ROOT)/lib/$(YAM_NATIVE)
+ CPLUSPLUS_LINK_FLAGS += -L$(SHARED_LIBDIR) -rpath $(SHARED_LIBDIR) -rpath $(YAM_ROOT)/lib/$(YAM_NATIVE)
+ CC_EXTRA_SHLIB = -lgcc
+endif
+export CC_EXTRA_SHLIB
+
+#==========================================================
+# for TCL
+export HAVE_TCL         = true
+export TCL_LIBDIR       = /home/atbe/pkgs/lib/$(YAM_TARGET)
+export TCL_INCDIR       = -I/home/atbe/pkgs/include/tcl8.0
+export TCL_LIBS         = -L$(TCL_LIBDIR) -ltcl8.0  -ldl -lm
+
+# for TK
+export HAVE_TK          = true
+export TK_LIBDIR        = $(TCL_LIBDIR)
+export TK_INCDIR        = $(TCL_INCDIR) -I/home/atbe/pkgs/include/tk8.0
+export TK_LIBS          = -L$(TK_LIBDIR) -ltk8.0 -lX11 $(TCL_LIBS)
+
+# for TIX
+export HAVE_TIX         = true
+export TIX_LIBDIR       = $(TCL_LIBDIR)
+export TIX_INCDIR       = $(TK_INCDIR) -I/home/atbe/pkgs/include
+export TIX_LIBS         = -L$(TIX_LIBDIR) -ltix4.1.8.0 $(TK_LIBS)
+
+#==========================================================
+# for TRAMEL
+export HAVE_TRAMEL	=
+
+#==========================================================
+export HAVE_NDDS        = false
+export HAVE_SCOPE       = false
+
+#==========================================================
+# for Matlab
+export HAVE_MATLAB      = false
+export HAVE_SIMULINK    = false
+export HAVE_RTW         = false
+export MATLAB_INCDIR    = -I$(MATLAB)/extern/include
+export SIMULINK_INCDIR  = $(MATLAB_INCDIR) -I$(MATLAB)/simulink/include
+export RTW_INCDIR       = $(SIMULINK_INCDIR) -I$(MATLAB)/rtw/c/libsrc -I$(MATLAB)/rtw/c/src
+export MATLAB_LIBDIR    = $(MATLAB)/extern/lib/sgi
+export MATLAB_LIBS      = -R$(MATLAB_LIBDIR) -L$(MATLAB_LIBDIR) -leng -lmat -lmx -lmi -lut

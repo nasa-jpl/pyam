@@ -1,0 +1,60 @@
+#############################################################################
+#
+#  UNIX makefile for Sun4 architecture, SunOS version 4.1.x.
+#
+# modification history
+# ------------ -------
+# RTI,08jun94,vwc GNU make no longer exports variables to the
+#		  environment, so -B$(GCC_EXEC_PREFIX) is *required*
+
+#============================================================================
+# Define the architecture-dependent toolset.
+# Sysadmin: edit these to reflect your system configuration
+
+#===========================================================
+# for using the system GCC
+
+#gnuBin = /opt/gnu/bin
+#export GCC_EXEC_PREFIX = /opt/gnu/lib/gcc-lib
+#export COMPILER_PATH=/opt/gnu/lib/gcc-lib/sparc-sunos4.1.3_U1/2.7.2
+
+#===========================================================
+# for using  RTI's GCC
+
+export gnuBin = $(RTIHOME)/gnu/sparcSunos4/bin
+export GCC_EXEC_PREFIX = $(RTIHOME)/gnu/sparcSunos4/lib/gcc-lib/
+export COMPILER_PATH=$(RTIHOME)/gnu/sparcSunos4/lib/gcc-lib/sparcSunos4/2.6.2/
+export CC = $(gnuBin)/gcc -B$(GCC_EXEC_PREFIX) -DRTI_UNIX -DRTS_UNIX
+export AR = ar
+export RANLIB = ranlib
+
+#===========================================================
+export RTI_TARGET=sun4
+
+#export MYEXTRASDIR=$(ATBE_ROOT)/src/cs-utils
+#export TCL_LIBDIR=/home/jain/src/lib
+export TCL_LIBDIR=/usr/local/lib
+
+export XIPC_HOME=/proj/nm-ds1/integration/ipc
+
+export DSHELLHOME=$(ATBE_ROOT)/src/Dshell
+#export DSHELLLIBS_DIR= $(MYEXTRASDIR)/lib/$(TARGET)
+
+#export DSHELLLIBS = $(DSHELLLIBS_DIR)/libmod_dshell.a \
+#	$(DSHELLLIBS_DIR)/libmod_darts.a \
+#	$(DSHELLLIBS_DIR)/libmod_fst-utils.a \
+#	$(DSHELLLIBS_DIR)/libhdw_acme.a \
+#	$(DSHELLLIBS_DIR)/libhdw_cassini.a \
+#	$(DSHELLLIBS_DIR)/libhdw_galileo.a \
+#	$(DSHELLLIBS_DIR)/libhdw_mpf.a \
+#	$(DSHELLLIBS_DIR)/libhdw_nmp_proto.a \
+#	$(DSHELLLIBS_DIR)/libhdw_general.a  \
+#	$(DSHELLLIBS_DIR)/libmod_tcl.a  \
+#	$(DSHELLLIBS_DIR)/libmod_msc.a
+
+export DSHELLLIBS = $(ATBE_ROOT)/lib/sparc-sunos4/libDshell.a
+
+export TCL_INCDIR=-I/usr/local/include
+
+export MYCOMPILATIONFLAGS = -DSUNOS4
+#export CSREALTYPE=double

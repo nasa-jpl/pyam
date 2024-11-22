@@ -1,0 +1,67 @@
+# site specific stuff common to all site-config files
+
+#==========================================================
+RTIHOME = /home/atbe/pkgs/src/rti
+
+#==========================================================
+# for RTI's Stethoscope
+SCOPE_50 = true
+SCOPEGCCEXT =
+
+#==========================================================
+# load in generic flag settings
+include $(SITEDEFSHOME)/sites/shared.mk
+
+HAVE_TRAMEL = true
+
+#==========================================================
+# for TCL
+export TCL_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+export TCL_INCDIR	= -I/home/atbe/pkgs/include
+export TCL_LIBS		= $(TCL_LIBDIR)/libtcl.a -lm
+
+# for TK
+export X11_ROOT		= /opt/X11R5
+export TK_LIBDIR	= $(TCL_LIBDIR)
+export TK_INCDIR	= $(TCL_INCDIR) -I$(X11_ROOT)/include
+export TK_LIBS		= $(TK_LIBDIR)/libtk.a $(X11_ROOT)/lib/libX11.a \
+				$(TCL_LIBS)
+
+# for TIX
+export TIX_LIBDIR       = $(TCL_LIBDIR)
+export TIX_INCDIR       = $(TCL_INCDIR)
+export TIX_LIBS         = $(TIX_LIBDIR)/libtix.a $(TK_LIBS)
+
+#==========================================================
+# for TRAMEL
+export TRAMEL_INCDIR	= -I$(YAM_ROOT)/include/Tramel
+export TRAMEL_LIBDIR	= .
+export TRAMEL_LIBS	= -ltramel -ltcltramel
+
+ifeq ($(YAM_TARGET),m68k-vxworks)
+  TRAMEL_INCDIR += -Dmc68000
+endif
+
+#==========================================================
+# for Mesa
+export MESA_INCDIR	= -I/home/atbe/pkgs/include
+export MESA_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+export MESA_LIBS	= -L$(MESA_LIBDIR) -lMesaGLU -lMesaGL
+
+#==========================================================
+# for RTI's NDDS
+HAVE_NDDS = true
+export NDDS_INCDIR	= -I$(NDDSHOME)/include/$(RTI_OS) \
+				-I$(NDDSHOME)/include/share
+export NDDS_LIBS	= $(NDDSHOME)/lib/$(RTI_TARGET)/libndds.a \
+				$(RTILIBHOME)/lib/$(RTI_TARGET)/libutilsip.a
+
+#==========================================================
+# for Matlab
+export MATLAB		= /opt/matlab
+export MATLAB_INCDIR	= -I$(MATLAB)/extern/include
+export MATLAB_LIBS	= -L$(MATLAB)/extern/lib/sol2
+
+#==========================================================
+# for Perl
+export PERL		= /usr/local/bin/perl

@@ -1,0 +1,32 @@
+--- cppcheck-htmlreport.orig	2010-12-20 12:35:00.296634000 -0800
++++ cppcheck-htmlreport	2010-12-20 12:49:55.608665000 -0800
+@@ -25,6 +25,14 @@
+ 	margin: 0px;
+ }
+
++.error {
++	font-family: Arial;
++	font-size: 13px;
++	background-color: #ffb7b7;
++	padding: 0px;
++	margin: 0px;
++}
++
+ #page-header {
+ 	clear: both;
+ 	width: 900px;
+@@ -287,9 +295,12 @@
+     for filename, data in files.iteritems():
+         stream.write("<tr><td colspan='4'><a href=\"%s\">%s</a></td></tr>" % (data["htmlfile"], filename))
+         for error in data["errors"]:
+-            stream.write("<tr><td><a href='%s#line-%d'>%d</a></td><td>%s</td><td>%s</td><td>%s</td></tr>" %
++            error_class = ''
++            if error["severity"] == "error":
++                error_class = " class=\"error\" "
++            stream.write("<tr><td><a href='%s#line-%d'>%d</a></td><td>%s</td><td>%s</td><td %s>%s</td></tr>" %
+                          (data["htmlfile"], error["line"], error["line"], error["id"],
+-                          error["severity"], error["msg"]))
++                          error["severity"], error_class, error["msg"]))
+     stream.write("</table>")
+     stream.write(HTML_FOOTER)
+     stream.close()

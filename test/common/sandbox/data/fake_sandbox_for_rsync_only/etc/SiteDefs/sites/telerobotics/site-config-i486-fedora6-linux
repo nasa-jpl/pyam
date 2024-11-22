@@ -1,0 +1,137 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-i486-fedora5-linux
+
+# per http://sourceforge.net/tracker/index.php?func=detail&aid=1560993&group_id=1645&atid=101645
+#CPLUSPLUS_COMPILE_FLAGS += -fno-strict-aliasing
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+
+###GL_LIBS   := -Wl,-Bdynamic -lGLU  -lGL -lXmu -lXt -lXi -lXpm -lXp -lX11
+
+# This enables the new DT_GNU_HASH hashstyle linker option to allow faster
+# loading of dynamic libraries at run time
+# See http://gentoo-wiki.org/HOWTO_Hashstyle
+# Verify that this works by running 'readelf -a' on shared library and
+#   grepping for GNU_HASH
+CC_SHARED_LINK_FLAGS += -Wl,--hash-style=both
+
+#====================================================
+
+HAVE_SOQT := true
+SOQT_CFLAGS = -I/home/dlab/pkgs/$(YAM_TARGET)/stow/SoQt-1.4.1/include \
+              -I/usr/lib/qt-3.3/include -I/home/dlab/pkgs/src/qwt/qwt-5.0.2/src
+
+QT_LIBS	    := -L/usr/lib/qt-3.3/lib -lqt-mt -L/home/atbe/pkgs/src/qwt/qwt-5.0.2/lib -lqwt
+SOQT_LIBS = -L/home/dlab/pkgs/$(YAM_TARGET)/stow/SoQt-1.4.1/lib -lSoQt $(QT_LIBS)
+
+
+HAVE_COINSHADERS := true
+COIN_INCDIR     :=  /home/dlab/pkgs/$(YAM_TARGET)/stow/Coin-2.5
+COIN_INC     :=  \
+                -I/home/dlab/pkgs/$(YAM_TARGET)/stow/Coin-2.5/include \
+                -DCOIN3D
+
+COIN_LIBS       := \
+                -L/home/dlab/pkgs/$(YAM_TARGET)/stow/Coin-2.5/lib \
+                -lCoin \
+                 -L/home/dlab/pkgs/$(YAM_TARGET)/stow/simage-1.6.1/lib -lsimage
+
+
+GLEW_CFLAGS = -I/home/atbe/pkgs/i486-fedora6-linux/include
+GLEW_LIBS = -L/home/atbe/pkgs/i486-fedora6-linux/lib -lGLEW -lglut
+
+#====================================================
+MOTIF_LIBS = -L/usr/lib -lXm
+
+
+#====================================================
+###export HIPPOPATH = /usr/include/HippoDraw
+HIPPO_INCS              := -I$(QT_DIR)/include -I/usr/include/HippoDraw
+HIPPO_LIBS              := -L$(QT_DIR)/lib -L/usr/lib -lqt-mt -lqui -laxiswidget -lhippoqt -lhippo
+
+#====================================================
+QWT_INCLUDES      := -I/home/atbe/pkgs/src/qwt/qwt-5.0.2/src
+QWT_LIBS          := -L/home/atbe/pkgs/src/qwt/qwt-5.0.2 -lqwt
+
+#==========================================================
+# for SWIG
+#SWIG_PATH := /home/atbe/pkgs/i486-fedora4-linux/stow/SWIG-1.3.30
+
+# updated as of 061125 (past 1.3.31)
+## SWIG_PATH := /home/atbe/pkgs/i486-fedora4-linux/stow/SWIG-cvs-061118
+SWIG_PATH := /usr
+SWIG_PATH := /home/dlab/pkgs/i486-fedora6-linux/stow/swig-1.3.35
+SWIG_VERSION  := 1.3.35
+
+#SWIG_PATH := /home/atbe/pkgs/i486-fedora4-linux/stow/SWIG-cvs
+
+### -O option is equivalent to
+###        -modern -fastdispatch -dirvtable -nosafecstrings -fvirtual -noproxydel
+###         -fastproxy -fastinit -fastunpack -fastquery -modernargs -nobuildnone
+###
+
+
+### 9/06/06 - added the -nofastproxy option because SWIG was otherwise
+### generating instancemethod calls in the _Py.py file which was
+### clobbering all the documentation coming in through docstrings.i.
+### There may be a better way to deal with this.
+### Followup - apparently this has been fixed in the repository per
+### SWIG mailing list messages 4/20/07
+
+
+
+SWIG_PYTHON_OPTS := -modern -fastproxy -fastdispatch -dirvtable -nosafecstrings -noproxydel  -fastinit -fastunpack -fastquery -modernargs -nobuildnone -nodefaultctor -nofastproxy
+
+# add -threads option if not disabled
+ifneq ($(SWIG_THREADS),false)
+   SWIG_PYTHON_OPTS += -threads
+endif
+
+####SWIG_PYTHON_OPTS := -O -fnovirtual
+
+###SWIG_PYTHON_OPTS := -O -threads
+
+# shorter form for SWIG 1.3.30
+# need -noproxyimport because the import lines in the Python proxy file
+#     is missing the package name (even though the class inheritance
+#     uses the package name). Looks like a bug.
+SWIG_PYTHON_OPTS := -O -threads -keyword -nodefaultctor -nofastproxy -noproxyimport -w511
+
+
+
+# -modern -fastdispatch -dirvtable -nosafecstrings  -noproxydel -fastproxy -fastinit -fastunpack -fastquery -modernargs -nobuildnone
+SWIG	  := $(SWIG_PATH)/bin/swig
+
+# with this flag DshellObj did not have the integratorSelect method!
+# -fvirtual
+
+# using these caused a seg fault when Dshell tried to load a model module
+#  -threads
+
+SWIG_PYTHON_INC   := $(SWIG_PYTHON_OPTS) -I$(SWIG_PATH)/share/swig/$(SWIG_VERSION)/python -I$(SWIG_PATH)/share/swig/$(SWIG_VERSION)
+#SWIG_TCL_INC   := -I$(SWIG_PATH)/share/swig/1.3.31/tcl -I$(SWIG_PATH)/share/swig/1.3.31
+
+###SWIG		 := /home/atbe/pkgs/i486-fedora3-linux/stow/SWIG-1.3.25/bin/swig
+
+#==========================================================
+#
+# Spice installation
+#
+CSPICE_DIR	:= /home/dlab/pkgs/src/spice/cspice-v62-32bit

@@ -1,0 +1,42 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+
+# need to export the following since wtxtcl needs it
+export WIND_BASE        :=  /home/atbe/pkgs/src/vxWorks/wind2.0_sim
+
+# Do not set GCC_EXEC_PREFIX!!! It is causing problems with the
+# compiling of some of the C++ files in Dvalue and Darts++ modules
+# However, it appears to be needed for building the C files, and hence
+# we pass it in using the -B option
+#INT_GCC_EXEC_PREFIX  :=  ${WIND_BASE}/host/${WIND_HOST_TYPE}/lib/gcc-lib/
+
+# needed so that wtxtcl can be found
+#export PATH	      := $(PATH):$(WIND_BIN)
+
+#==========================================================
+# for TRAMEL
+HAVE_TRAMEL		:= false
+
+#==========================================================
+# for RTI's Stethoscope
+export SCOPE_LIBS	=
+export SCOPE_INCDIR	=
+
+#==========================================================
+# for RTI's NDDS
+HAVE_NDDS		:= false
+export NDDS_LIBS	=

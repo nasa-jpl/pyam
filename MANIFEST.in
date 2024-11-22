@@ -1,0 +1,18 @@
+include MANIFEST.in
+include README.pdf
+include README.rst
+include HISTORY.rst
+include standalone.bash
+include standalone/*
+
+exclude Makefile*
+exclude .pyam
+exclude check.bash
+exclude distribute.bash
+exclude jenkins*
+exclude pylintrc
+exclude status.bash
+exclude test
+exclude tox.ini
+exclude TODO.rst
+exclude webpage*

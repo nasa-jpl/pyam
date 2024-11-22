@@ -1,0 +1,26 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-i486-linux
+
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+
+# remove the /usr/include to get rid of gcc 3's warnings
+TCL_INCDIR	:=
+
+
+IV_INCDIR	:= /home/atbe/pkgs/i486-linux/stow/OpenInventor-2.1.5-9-i486-linux-gcc3.2/usr/include
+IV_LIB_DIR      := /home/atbe/pkgs/$(YAM_TARGET)/lib
+export IV_XT_LIB	= $(IV_LIB_DIR)/libInventorXt.a
+export IV_LIB	= $(IV_LIB_DIR)/libInventor.a $(IV_LIB_DIR)/libFL.a  -L/usr/X11R6/lib -lXm $(IV_LIB_DIR)/libimage.a

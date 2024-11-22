@@ -1,0 +1,401 @@
+#
+# Makefile.yam
+#
+# This Makefile is used by YAM scripts to build and link a module.
+# It should have targets for:
+#     yam-mklinks links depends libs bins clean
+# even if some are no-ops.
+#
+# When invoked from the YAM scripts, this Makefile is passed values for
+# YAM_NATIVE, YAM_ROOT, YAM_SITE, and YAM_TARGET variables.
+#
+# Use etc/SiteDefs/Makefile.yam-common to take advantage of some common
+# functionality.
+#
+
+#
+# Makefile.yam - specify source files, public header files and libraries,
+#
+
+# this variable is true if building Dshell models module
+MODEL_MODULE	:= true
+
+SKIP_YAM_VERSION        ?= false
+
+#------------------------------------------------------------------------------
+# include a file that provides much common functionality
+# be sure to include this *after* setting the MODULE_* variables
+# DO NOT move these lines. It should be the first thing in the makefile
+#------------------------------------------------------------------------------
+ifndef YAM_ROOT
+  include ../../etc/SiteDefs/mkHome/shared/overall.mk
+else
+  include $(YAM_ROOT)/etc/SiteDefs/mkHome/shared/overall.mk
+endif
+
+#------------------------------------------------------------------------------
+# specify what to build, either the name of a binary executable or library.
+#
+# if building a library, $(PROJ) must start with "lib", and should
+# NOT contain a suffix such as ".a" or ".so".
+#
+# if $(PROJ) is left blank, no source files will be compiled, but the module
+# may still contain scripts or public header files.
+#------------------------------------------------------------------------------
+AUTODIR := auto
+
+MDLPY 			:= $(wildcard *.mdl)
+MDLLIST 		:= $(foreach mdl, $(MDLPY), $(subst .mdl,,$(notdir $(mdl))))
+
+# filter out any models that are supposed to be skipped
+ifneq ($(SKIP_MODELS),)
+  MDLLIST		:= $(filter-out $(SKIP_MODELS), $(MDLLIST) )
+endif
+
+MODELS 			:= $(MDLLIST)
+
+#MDLHDRS 		:= $(addsuffix CIF.h, $(addprefix $(AUTODIR)/, $(MDLLIST)) )
+
+ifneq ($(HAVE_MATLAB),true)
+  SKIP_MEX_BUILD	?= true
+else
+  SKIP_MEX_BUILD	?= false
+endif
+
+ifneq ($(MODELS),)
+  PROJ_LIBS 		+= lib$(MODULE_NAME)
+
+  ifeq  ($(HAVE_PYTHON),true)
+    # a bit of a hack. The exporting of the this "external" library is handled
+    # differently
+    PROJ_LIBS_INTERNAL	+= $(MODULE_NAME)_Py
+  endif
+
+endif
+PROJ_BINS 		+=
+
+
+CC_INCLUDES		+=
+
+#------------------------------------------------------------------------------
+# specify public .h, .a, .so, etc. files by filling in *_LINKS variables
+# symbolic links to these files get created in top-level directories
+#------------------------------------------------------------------------------
+#INC_MODULE_LINKS 	+=  YamVersion.h $(MDLHDRS)
+INC_MODULE_LINKS 	+=  $(addsuffix .mdl,  $(MDLLIST) ) $(addsuffix .h,  $(MDLLIST) ) $(addsuffix IF.h, $(addprefix $(AUTODIR)/, $(MDLLIST)) )
+ifneq ($(SKIP_MEX_BUILD),true)
+  BIN_TARGET_LINKS 	+=  $(addsuffix Mex.$(MEXEXT), $(addprefix $(YAM_TARGET)/, $(MDLLIST)) )
+endif
+
+# for VxWorks need to export links to the individual model object files
+ifeq ($(YAM_OS),vx)
+  BIN_TARGET_LINKS 	+=  $(addsuffix IF.o, $(addprefix $(YAM_TARGET)/, $(MDLLIST)) )
+endif
+
+ifeq  ($(HAVE_PYTHON),true)
+
+  # variable containing model module dependency string
+  export PYTHON_IMPORTS
+
+  ifeq ($(BUILDING_SHARED_LIBS),true)
+    PYTHON_TARGET_LINKS	:= $(YAM_TARGET)/$(MODULE_NAME)_Py.so
+  endif
+
+  ifeq ($(BUILD_STATIC_LIBS),true)
+    # LIB_STATIC_TARGET_LINKS	:= $(YAM_TARGET)/$(MODULE_NAME)_Py.a
+  endif
+endif
+
+ifeq ($(MODULE_TYPE),link)
+  TCLMODLNK_DIR = $(LOCAL_DIR)
+else
+  TCLMODLNK_DIR = ../../../src/$(MODULE_NAME)
+endif
+
+
+mklinks-std:
+    ifeq ($(HAVE_TCL),true)
+	@$(call exportmklinks,lib/ModulesTclIndex/$(MODULE_NAME)/,$(AUTODIR)/tclIndex,$(TCLMODLNK_DIR))
+    endif
+	@$(call exportmklinks,lib/ModulesTclIndex/$(MODULE_NAME)/,$(AUTODIR)/pyIndex,$(TCLMODLNK_DIR))
+    ifeq  ($(HAVE_PYTHON),true)
+        # export link for RoverppModels_Py.a as libRoverppModels_Py.a for ease of
+        # linking
+	@$(call exportsinglelink,lib/$(YAM_TARGET)-static/lib$(MODULE_NAME)_Py.$(LIB_SUFFIX),$(YAM_TARGET)/$(MODULE_NAME)_Py.$(LIB_SUFFIX),$(RELTGTLNK_DIR))
+    endif
+
+
+ifeq ($(HAVE_TCL),true)
+
+mklinks-stdOBS:
+      ifneq ($(wildcard $(YAM_ROOT)/lib/ModulesTclIndex/$(MODULE_NAME)/tclIndex),$(YAM_ROOT)/lib/ModulesTclIndex/$(MODULE_NAME)/tclIndex)
+	@echo "   linking $(AUTODIR)/tclIndex into ./lib/ModulesTclIndex/$(MODULE_NAME) ..."
+	@mkdir -p $(YAM_ROOT)/lib/ModulesTclIndex/$(MODULE_NAME)
+	@ln -s $(TCLMODLNK_DIR)/$(AUTODIR)/tclIndex $(YAM_ROOT)/lib/ModulesTclIndex/$(MODULE_NAME)/tclIndex
+      endif
+
+endif
+
+
+rmlinks-std:
+	rm -rf $(YAM_ROOT)/lib/ModulesTclIndex/$(MODULE_NAME)
+    ifeq  ($(HAVE_PYTHON),true)
+        # export link for RoverppModels_Py.a as libRoverppModels_Py.a for ease of
+        # linking
+	@rm -f $(call exportrmlinks,lib/$(YAM_TARGET)-static,$(YAM_TARGET)/$(MODULE_NAME)_Py.$(LIB_SUFFIX))
+    endif
+
+
+#------------------------------------------------------------------------------
+# specify source code to compile (must end in .c, .C or .cc)
+# for source files to be compiled for each PROJ_LIBS and PROJ_BINS
+# value listed above
+#------------------------------------------------------------------------------
+CC_SRC-lib$(MODULE_NAME) 	:= $(ADDT_CSRCS)
+CPLUSPLUS_SRC-lib$(MODULE_NAME) := $(addprefix $(AUTODIR)/,$(addsuffix IF.cc,$(MDLLIST))) \
+					$(ADDT_CPLUSPLUSSRCS)
+CPLUSPLUS_SRC-lib$(MODULE_NAME)_Tcl 	:= $(AUTODIR)/$(MODULE_NAME)Register.cc
+CC_SRC-$(MODULE_NAME)_Py 	:= $(AUTODIR)/$(MODULE_NAME)RegisterPy.cc
+
+#------------------------------------------------------------------------------
+# when building binary executables and shared libraries, list any extra
+# libraries that must be linked in and any -L options needed to find them.
+#------------------------------------------------------------------------------
+LIBS-lib$(MODULE_NAME) 		:= $(ADDT_SOLIBS)
+LIBS-lib$(MODULE_NAME)_Tcl	:= -l$(MODULE_NAME)
+# need to link in Python libraries because DshellMex otherwise finds
+# unresolved symbols when importing the model modules
+LIBS-$(MODULE_NAME)_Py		:= -l$(MODULE_NAME)  $(PYTHON_LIBS)
+
+ifeq ($(YAM_TARGET),i486-cygwin)
+   LIBS-lib$(MODULE_NAME)	+= -lTerrainSurface $(DARTS_LIBS) -lDshell++ -l_Dshell_Py -lDshell++ -lDIntegrator $(SIM_SCAPE_BASIC_LIBS) $(PYTHON_LIBS) $(DARTS_LIBS)
+   LIBS-$(MODULE_NAME)_Py	+= -lTerrainSurface $(DARTS_LIBS) -lDshell++ -l_Dshell_Py -lDshell++ -lDIntegrator $(SIM_SCAPE_BASIC_LIBS) $(PYTHON_LIBS) $(DARTS_LIBS)
+endif
+
+ifeq ($(YAM_TARGET),i486-mingw)
+   LIBS-lib$(MODULE_NAME)	+= -lTerrainSurface $(DARTS_LIBS) -lDshell++ -l_Dshell_Py -lDshell++ -lDIntegrator $(SIM_SCAPE_BASIC_LIBS) $(PYTHON_LIBS) $(DARTS_LIBS)
+   LIBS-$(MODULE_NAME)_Py	+= -lTerrainSurface $(DARTS_LIBS) -lDshell++ -l_Dshell_Py -lDshell++ -lDIntegrator $(SIM_SCAPE_BASIC_LIBS) $(PYTHON_LIBS) $(DARTS_LIBS)
+endif
+
+
+#------------------------------------------------------------------------------
+# augment flags used when compiling assembler, C, and C++ source code
+#------------------------------------------------------------------------------
+MODULE_COMPILE_FLAGS := -I. -I$(AUTODIR) $(MODEL_COMPILE_FLAGS) -DUSE_DARTSPP $(BOOST_INCS)
+
+CFLAGS-lib$(MODULE_NAME)_Tcl	:=  -DHAVE_TCL $(TCL_INCDIR)
+CFLAGS-$(MODULE_NAME)_Py	:=  $(PYTHON_INCDIR)
+
+# flag to use if Darts++ is required by models
+ifeq ($(NEEDS_DARTSPP),true)
+   MODULE_COMPILE_FLAGS += -DHAVE_DARTSPP
+endif
+
+# need this to get around the need for value.h by some modules
+ifeq ($(YAM_TARGET),i486-cygwin)
+   MODULE_COMPILE_FLAGS +=
+endif
+
+#------------------------------------------------------------------------------
+# specify information for building Doxygen documentation
+#------------------------------------------------------------------------------
+DOXYGEN_DOCS 			:= true
+DOXYGEN_TAGFILES 	      	+= DartsBase Dshell++ Darts++ \
+					Dshell++Scripts
+export DOXYGEN_EXCLUDE_PATTERNS += *Mex.C MODELS.C
+export DOXYGEN_ENABLED_SECTIONS += standalone_model
+# turn off generation of tagfiles
+#GENERATE_TAGFILE 		:=
+
+# see if there is a "main" page for the model' documentation
+#ifeq ($(wildcard main.doxex),main.doxex)
+#  export MODEL_MAINPAGE = model_main_sec
+#endif
+
+#------------------------------------------------------------------------------
+# Add any additional rules specific to the module
+#------------------------------------------------------------------------------
+stubs: $(addsuffix .cc,$(MDLLIST)) $(addsuffix .h,$(MDLLIST))
+
+stubspy: $(addprefix auto/, $(addsuffix IF.cc,$(MDLLIST))  ) auto/pyIndex  auto/$(MODULE_NAME)Register.cc
+
+
+auto/pyIndex: stubspy1
+
+auto/$(MODULE_NAME)Register.cc: $(addsuffix .mdl,$(MDLLIST)) stubspy1
+
+stubspy1:
+	$(YAM_ROOT)/bin/Drun $(PYTHON_BIN) -c "from Dshell import DshellAutoGen; DshellAutoGen.mkRegisterFiles(module_name='$(MODULE_NAME)', model_name_list='$(MDLLIST)'.split(), python_imports='$(PYTHON_IMPORTS)')"
+
+ifeq ($(HAVE_PYTHON),true)
+   HAVE_PYTHON_TRUE 	:= true
+else
+   HAVE_PYTHON_TRUE 	:=
+endif
+
+links-module:: Autodir stubs stubspy docdir $(CPLUSPLUS_SRC-lib$(MODULE_NAME)) doc/$(MODULE_NAME).modellib_dox
+
+
+pymdls:  $(foreach  i, $(MODELS), $(i).mdl)
+
+
+
+
+Autodir: auto
+	mkdir -p auto
+
+# Python versions
+auto/%IF.cc : %.mdl
+	$(YAM_ROOT)/bin/Drun $(PYTHON_BIN) -c "from Dshell import DshellAutoGen; DshellAutoGen.mkdotHCppFiles(model_name='$*')"
+
+
+
+#------------------------------------
+ifeq ($(AUTODIR),Auto)
+
+links-module:: $(AUTODIR)/$(MODULE_NAME)Register.cc $(AUTODIR)/pyIndex  $(if $(HAVE_PYTHON_TRUE),$(AUTODIR)/$(MODULE_NAME)RegisterPy.cc,)
+
+
+Auto/$(MODULE_NAME)RegisterPy.cc : $(MDLPY)
+        ifneq ($(MODELS),)
+	  $(YAM_ROOT)/bin/MdlLibPyRegisterModels -prefix  $(MODULE_NAME) $(MODELS) \
+		> $@
+        endif
+
+endif
+
+#-----------------------------------
+
+
+doc/$(MODULE_NAME).modellib_dox:
+        ifneq ($(MODELS),)
+	  $(YAM_ROOT)/bin/MdlLibDoxGen -prefix $(MODULE_NAME) $(MODELS) \
+		> $@
+        endif
+
+
+
+#-----------------------------------
+ifeq ($(AUTODIR),Auto)
+
+Auto/pyIndex : $(MDLPY)
+        ifneq ($(MODELS),)
+	  $(YAM_ROOT)/bin/MdlLibPyIndex -prefix $(MODULE_NAME) $(MODELS) \
+		> $@
+        endif
+
+endif
+
+#============================
+doxfiles:: doc/$(MODULE_NAME).modellib_dox $(addprefix doc/, $(addsuffix .model_dox,$(MDLLIST)))
+
+doc/$(MODULE_NAME)Toc.sdf:
+	$(YAM_ROOT)/bin/MdlLibTocSdfGen -prefix $(MODULE_NAME) $(MODELS) \
+		> doc/$(MODULE_NAME)Toc.sdf
+
+doc/%.model_dox: %.mdl
+	$(YAM_ROOT)/bin/Drun $(PYTHON_BIN) -c "from Dshell import DshellAutoGen; DshellAutoGen.mkDoxFiles(model_name='$*', module_name='$(MODULE_NAME)', www_url='$(WWW_URL)')"
+
+#============================
+$(YAM_TARGET)/%IF.o: $(AUTODIR)/%IF.cc %.cc %.h
+	@echo ""
+	$(CPLUSPLUS) -I$(AUTODIR) -I. \
+		$(CPLUSPLUS_COMPILE_FLAGS) \
+		-c $< -o $@
+
+$(YAM_TARGET)/%IF.d: $(YAM_TARGET)/$(FLAVOR)
+
+$(YAM_TARGET)/%IF.d: $(AUTODIR)/%IF.cc
+	$(deprule-cplusplus)
+
+
+$(YAM_TARGET)/%Register.o : $(AUTODIR)/%Register.cc
+	$(CPLUSPLUS) $(CPLUSPLUS_COMPILE_FLAGS)  -c $< -o $@
+
+$(YAM_TARGET)/%RegisterPy.o : $(AUTODIR)/%RegisterPy.cc
+	$(CPLUSPLUS) $(CPLUSPLUS_COMPILE_FLAGS) -c $< -o $@
+
+$(YAM_TARGET)/%Register.d : $(AUTODIR)/%Register.cc
+	$(deprule-cc)
+
+#============================
+MATLAB_DIR 		:= $(MATLAB)
+MATLAB_INCDIR    	:= -I$(MATLAB_DIR)/extern/include
+MEX 			:= $(MATLAB_DIR)/bin/mex
+
+CMEX_FLAGS := $(CC_INCLUDES) -g $(CC_DEFINES) \
+	     -I$(MATLAB_DIR)/simulink/include -I. \
+	     -I$(AUTODIR) -I$(MATLAB_DIR)/codegen/external/common \
+             -I$(MATLAB_DIR)/codegen/etc/SiteDefs/include -v
+
+## do we have the auto-code generator to make MEX wrappers for Dshell models?
+ifeq ($(YAM_TARGET),sparc-sunos4)
+  MATLAB_TARGET 	:= sun4
+  GCCFLAG 		:= $(CC)
+  MEXLDFLAGS		:= ''
+else
+  MATLAB_TARGET		:= sol2
+  # added SHARED_COMPILE_FLAG because the SparcWorks linker was having toruble
+  # building some of the model mexsol files (eg. GllStarScanner)
+  GCCFLAG 		:= $(CPLUSPLUS) $(SHARED_COMPILE_FLAG)
+  MEXLDFLAGS		:= ''
+endif
+
+ifeq ($(YAM_TARGET),mips-irix6.5)
+  MATLAB_TARGET		:= sgi64
+#  GCCFLAG := $(CC) -O3 $(FPERMISSIVE_OPT)
+  GCCFLAG 		:= $(CC) -ansi -w $(SHARED_COMPILE_FLAG)
+  MEXARCH		:= 'ARCH=sgi64'
+  MEXLDFLAGS		:='LDFLAGS=-n32 -shared -exported_symbol mexFunction -exported_symbol mexVersion'
+endif
+
+CMEX_FLAGS 		+= -L$(MATLAB_DIR)/extern/lib/$(MATLAB_TARGET)
+
+ifneq ($(USE_SHARED_LIBS),false)
+  ifeq ($(YAM_TARGET),sparc-sunos5.9)
+    SHARED_LIBS_FLAGS 	:= CLIBS='-R$(SHARED_LIBDIR):/usr/ucblib:$(YAM_ROOT)/lib/$(YAM_TARGET)' -L$(SHARED_LIBDIR)
+  endif
+endif
+
+HAVE_MEXAUTOGEN := false
+ifeq ($(shell test -f $(YAM_ROOT)/bin/MexAutoGen && echo true),true)
+    HAVE_MEXAUTOGEN 	:= true
+endif
+
+$(AUTODIR)/%Mex.C: $(YAM_TARGET)/%IF.o
+     ifeq ($(HAVE_MEXAUTOGEN),true)
+	$(YAM_ROOT)/bin/Drun -fep - MexAutoGen -user -user-dir $(AUTODIR) $*.tcl
+     endif
+
+$(YAM_TARGET)/%.$(MEXEXT): $(AUTODIR)/%.C
+  ifneq ($(SKIP_MEX_BUILD),true)
+	cd $(YAM_TARGET); \
+	  ${MEX} CC='$(GCCFLAG)' $(SHARED_LIBS_FLAGS) CFLAGS='' $(MEXLDFLAGS) \
+	  $(LOCAL_DIR)/$< -output $*.$(MEXEXT) \
+          -I$(LOCAL_DIR) -I$(LOCAL_DIR)/$(AUTODIR) $(CMEX_FLAGS) $(MODEL_COMPILE_FLAGS) \
+          -L$(YAM_ROOT)/lib/$(YAM_TARGET) -lDshell++ -lDarts  -lSOA \
+          -lDvalue -lYAClasses -lm -DMODEL_MEX_FILE $(LIBGCC)
+	@echo ""
+  endif
+
+MEXFILES 	:=
+ifneq ($(SKIP_MEX_BUILD),true)
+  ifeq ($(HAVE_MEXAUTOGEN),true)
+    MEXLIST  	:= $(addsuffix Mex.$(MEXEXT), $(MDLLIST))
+    MEXFILES 	:= $(addprefix $(AUTODIR)/, $(addsuffix Mex.C, $(MDLLIST))) \
+		$(addprefix $(YAM_TARGET)/,$(MEXLIST))
+  endif
+endif
+
+bins-module:: $(MEXFILES)
+
+#============================
+clean-module::
+	/bin/rm -rf $(MODULE_SUPPORTED_TARGETS) Auto auto doc/*.pod* doc/*.sdf doc/Summary doc/*.model_dox
+
+#------------------------------------------------------------------------------
+# include the "stdrules.mk" file that provides much common functionality.
+# do not change the following lines!
+# do not move the following lines before variable settings!
+#------------------------------------------------------------------------------
+include $(YAM_ROOT)/etc/SiteDefs/makefile-yam-tail.mk

@@ -1,0 +1,40 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+BUILDING_SHARED_LIBS = false
+
+include $(SITECONFIGDIR)/../telerobotics/site-config-x86_64-fedora13-linux
+
+HAVE_HDF5 := false
+HAVE_LCM := false
+HAVE_BOOST_LOG := false
+HAVE_PYTHON   := false
+HAVE_LCPPATH   := false
+HAVE_CEGUI := false
+HAVE_OGRE     := false
+HAVE_OIS := false
+
+SWIG :=
+
+#================================================
+# This version of Boost is built with multithread support.
+HAVE_BOOST := true
+BOOST_DIR := /usr
+BOOST_INCS := -I$(BOOST_DIR)/include -DNO_BOOST_LOG
+BOOST_THREAD_LIBS :=  $(BOOST_DIR)/lib/libboost_thread.a -pthread
+BOOST_LOG_LIBS :=
+
+#================================================
+LIBLBFGS_DIR  := /home/dlab/pkgs/${YAM_TARGET}/stow/liblbfgs-1.8
+LIBLBFGS_INCS := -I${LIBLBFGS_DIR}/include
+LIBLBFGS_LIBS := -L${LIBLBFGS_DIR}/lib -llbfgs
+
+#=========================================================
+HAVE_BULLET := true
+BULLET_DIR := /home/dlab/pkgs/${YAM_TARGET}/stow/bullet-2.77
+BULLET_INCS := -I$(BULLET_DIR)/include/bullet -DBT_USE_DOUBLE_PRECISION
+BULLET_COLLISION_LIBS := -L$(BULLET_DIR)/lib -lBulletCollision -lLinearMath
+BULLET_DYNAMICS_LIBS := -L$(BULLET_DIR)/lib -lBulletDynamics
+
+#================================================
+WITHOUT_SIMSCAPE	:= true

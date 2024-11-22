@@ -1,0 +1,26 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+#==========================================================
+include $(SITEDEFSHOME)/site.common
+include $(SITEDEFSHOME)/sites/site.gcc
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+#==========================================================
+# for Matlab
+export MATLAB_LIBS	= -L$(MATLAB)/extern/lib/sol2
+
+#----------------------------------------------------------
+#override for individual cases
+export TRAMEL_INCDIR	= -I/opt/fst/include
+export TRAMEL_LIBDIR	= /opt/fst/lib
+export TRAMEL_LIBS	= -L$(TRAMEL_LIBDIR) -ltramel -ltrx
+export TRAMEL_FST_LIBS  = -L$(TRAMEL_LIBDIR) -ltcltramel -ltrx -ltrfstime
+
+#---------------------------------------------------------
+#export TCL_INCDIR = -I/opt/tcltk-8.0/include
+#export TCL_LIBDIR = /opt/tcltk-8.0/lib
+#export TCL_LIBS

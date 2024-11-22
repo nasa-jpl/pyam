@@ -1,0 +1,12 @@
+#!/bin/bash -u
+#
+# Used for running programs in a yam-sandboxed environment.
+
+sandbox_path=$(yamroot)
+if [ $? -ne 0 ]
+then
+    echo 'srun must be run from within a sandbox'
+    exit 1
+fi
+
+"$sandbox_path/bin/Drun" "$@"

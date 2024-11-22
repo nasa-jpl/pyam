@@ -1,0 +1,39 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+
+#==========================================================
+#include $(SITEDEFSHOME)/site.common
+
+#include $(SITEDEFSHOME)/sites/site.gcc
+# this file contains rules for "gcc" based compilations.
+# It can be included by any site-config file for gcc based compilation
+
+CC = /home/atbe/pkgs/bin/hppa-hpux10/gcc
+CPLUSPLUS = $(CC)
+
+#==========================================================
+# for TCL
+#export TCL_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+#export TCL_INCDIR	= /home/atbe/pkgs/include
+#export TCL_LIBS		= $(TCL_LIBDIR)/libtcl.a -lm
+
+# for TK
+#export HAVE_TK		= true
+#export TK_LIBDIR	= $(TCL_LIBDIR)
+#export TK_INCDIR	= $(TCL_INCDIR)
+#export TK_LIBS		= $(TK_LIBDIR)/libtk.a -L/usr/lib/X11R5 -lX11 $(TCL_LIBS)
+
+#==========================================================
+# for Matlab
+export HAVE_MATLAB      = false
+export HAVE_SIMULINK    = false
+export HAVE_RTW         = false
+
+#==========================================================
+# for Perl
+export PERL		= /afs/jpl.nasa.gov/ets/released/hp700_ux90/ets/bin/perl5

@@ -1,0 +1,28 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+#==========================================================
+JPEG_INCDIR	:= -I/home/atbe/pkgs/sparc-sunos5.9/include
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+export WIND_BASE        := /afs/jpl.nasa.gov/group/wind/t22_ppc
+export WIND_HOST_TYPE   :=  sun4-solaris2
+
+#==========================================================
+HAVE_TRAMEL             := false
+HAVE_NDDS               := false
+
+#==========================================================
+# add other flag settings that are specific to this site/target build

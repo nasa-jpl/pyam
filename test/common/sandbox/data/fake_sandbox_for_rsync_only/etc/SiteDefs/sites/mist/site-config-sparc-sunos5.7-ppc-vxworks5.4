@@ -1,0 +1,56 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+export WIND_BASE	:= /dsw/wind-2.0.2-ppc
+export WIND_HOST_TYPE   :=  sun4-solaris2
+
+# needed so that wtxtcl can be found
+export PATH          := $(PATH):$(WIND_BASE)/host/$(WIND_HOST_TYPE)/bin
+
+#==========================================================
+# for TRAMEL
+export HAVE_TRAMEL	= false
+export TRAMEL_INCDIR    = -I/proj/proto/v2.2/ppc-vxworks/include
+#export TRAMEL_LIBDIR    = /proj/proto/v2.2/tramel/ppc-vxworks5.2
+export TRAMEL_LIBDIR    = /proj/proto/v2.2/ppc-vxworks/lib
+export TRAMEL_LIBS	= -L$(TRAMEL_LIBDIR) -ltramel
+
+#==========================================================
+# for RTI's Stethoscope
+export HAVE_SCOPE	= false
+STETHOSCOPEHOME = /opt/rti-5.0c-ppc/scope.5.0c
+RTILIBHOME = /opt/rti-5.0c-ppc/rtilib.3.7h
+export SCOPE_INCDIR	= -I$(STETHOSCOPEHOME)/include/$(RTI_OS) \
+				-I$(STETHOSCOPEHOME)/include/share
+export SCOPE_LIBS	= $(STETHOSCOPEHOME)/lib/$(RTI_TARGET)/libscope.so \
+			      $(RTILIBHOME)/lib/$(RTI_TARGET)/libutilsip.so
+
+
+#==========================================================
+# for RTI's NDDS
+export HAVE_NDDS	= false
+
+#==========================================================
+# for Matlab
+export HAVE_MATLAB	= false
+export HAVE_SIMULINK    = false
+export HAVE_RTW         = false
+export MATLAB_INCDIR    = -I$(MATLAB)/extern/include
+export SIMULINK_INCDIR  = $(MATLAB_INCDIR) -I$(MATLAB)/simulink/include
+export RTW_INCDIR       = $(SIMULINK_INCDIR) -I$(MATLAB)/rtw/c/libsrc -I$(MATLAB)/rtw/c/src
+export MATLAB_LIBDIR    =
+export MATLAB_LIBS      =

@@ -1,0 +1,352 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/telerobotics/site.local
+
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+include $(SITEDEFSHOME)/sites/telerobotics/site-config-x86_64-fedora11-linux
+
+#==========================================================
+# Allow overriding CC and CPLUSPLUS from environment variable
+OVERRIDE_CC ?= false
+ifneq ($(OVERRIDE_CC),false)
+  CC = $(OVERRIDE_CC)
+endif
+
+OVERRIDE_CPLUSPLUS ?= false
+ifneq ($(OVERRIDE_CPLUSPLUS),false)
+  CPLUSPLUS = $(OVERRIDE_CPLUSPLUS)
+endif
+
+#==========================================================
+# coverage analysis options
+# Set USE_GCOV environment variable to enable coverage analysis.
+ifeq ($(USE_GCOV),true)
+  CC_OPTIMIZATION		:= -g
+  CPLUSPLUS_OPTIMIZATION	:= -g
+  CC_COMPILE_FLAGS		+= -fprofile-arcs -ftest-coverage
+  CPLUSPLUS_COMPILE_FLAGS	+= -fprofile-arcs -ftest-coverage
+  CC_STATIC_LINK_FLAGS		+= -fprofile-arcs -ftest-coverage
+  CPLUSPLUS_STATIC_LINK_FLAGS	+= -fprofile-arcs
+  CPLUSPLUS_LIBS		+= -fprofile-arcs
+  CC_LIBS			+= -fprofile-arcs
+  CC_SHARED_LINK_FLAGS			+= -fprofile-arcs
+  CPLUSPLUS_SHARED_LINK_FLAGS           += -fprofile-arcs
+  #BUILDING_SHARED_LIBS		:= false
+else
+  CC_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  F77_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  CPLUSPLUS_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+endif
+
+
+
+#================================================
+PYTHONDIR             := /usr
+PYTHON_BIN            := $(PYTHONDIR)/bin/python
+PYTHON_INCDIR := -isystem /usr/include/python2.6
+PYTHON_LIBS := -L/usr/lib/python2.6 -lpython2.6
+PYTHONPATH	:=
+
+#================================================
+SWIG_PATH := /home/dlab/pkgs/${YAM_TARGET}/stow/swig-2.0.3
+SWIG_VERSION  := 2.0.3
+
+#SWIG_PYTHON_OPTS := -O -threads -keyword  -nofastproxy -noproxyimport -w511
+SWIG_PYTHON_OPTS := -O -threads -keyword
+# SWIG      := $(SWIG_PATH)/bin/swig
+SWIG	    :=
+
+SWIG_PYTHON_INC   := $(SWIG_PYTHON_OPTS) -I$(SWIG_PATH)/share/swig/$(SWIG_VERSION)/python -I$(SWIG_PATH)/share/swig/$(SWIG_VERSION)
+
+# This is for GCC when building the SWIG code. It is not for the swig binary. We ignore some of the GCC warnings since we can't control most of SWIG's output.
+SWIG_INCS := -Wno-cast-qual -Wno-unused-parameter -Wno-unused-variable -Wno-missing-field-initializers -Wno-old-style-cast -Wno-conversion
+
+#================================================
+# This version of Boost is built with multithread support.
+HAVE_BOOST := true
+BOOST_DIR := /home/dlab/pkgs/${YAM_TARGET}/stow/boost-1.46.1-with_boostlog
+BOOST_INCS := -isystem $(BOOST_DIR)/include -pthread
+
+HAVE_BOOST_THREAD :=true
+BOOST_THREAD_LIBS := -L${BOOST_DIR}/lib -lboost_thread -pthread
+
+HAVE_BOOST_FILESYSTEM := true
+BOOST_FILESYSTEM_LIBS := -L${BOOST_DIR}/lib -lboost_filesystem -lboost_system ${BOOST_THREAD_LIBS}
+
+HAVE_BOOST_LOG := true
+BOOST_LOG_LIBS := -L${BOOST_DIR}/lib -lboost_log ${BOOST_FILESYSTEM_LIBS}
+
+HAVE_BOOST_REGEX := true
+BOOST_REGEX_LIBS := -L${BOOST_DIR}/lib -lboost_regex
+
+#==========================================================
+LIBKML_INCS := -isystem /home/dlab/pkgs/${YAM_TARGET}/stow/libkml-trunk.2009.12.14/include
+LIBKML_LIBS := -L/home/dlab/pkgs/${YAM_TARGET}/stow/libkml-trunk.2009.12.14/lib
+
+#================================================
+HAVE_COIN := false
+
+#================================================
+HAVE_OGRE := true
+OGRE_DIR := /home/dlab/pkgs/$(YAM_TARGET)/stow/ogre-1.7.3
+OGRE_CFLAGS := -DOGRE_DOUBLE_PRECISION=1 -isystem $(OGRE_DIR)/include/OGRE
+OGRE_LIBS := -L$(OGRE_DIR)/lib -lOgreMain
+
+#================================================
+HAVE_OIS := true
+OIS_CFLAGS := -isystem /home/dlab/pkgs/x86_64-fedora13-linux/stow/ois-1.2.0/include
+OIS_LIBS := -L/home/dlab/pkgs/x86_64-fedora13-linux/stow/ois-1.2.0/lib -lOIS
+
+#================================================
+
+HAVE_GTK := true
+GTK_INCLUDES := -isystem /usr/include/gtk-2.0 -isystem /usr/lib64/gtk-2.0/include \
+                -isystem /usr/include/atk-1.0 -isystem /usr/include/cairo \
+                -isystem /usr/include/pango-1.0 -isystem /usr/include/glib-2.0 \
+                -isystem /usr/lib64/glib-2.0/include -isystem /usr/include/pixman-1 \
+                -isystem /usr/include/freetype2 -isystem /usr/include/libpng12
+
+GTK_LIBS := -lgtk-x11-2.0 -lgdk-x11-2.0 -lgobject-2.0 -lgthread-2.0 -lgdk_pixbuf-2.0
+
+#================================================
+
+HAVE_GLADE := true
+GLADE_INCS := -isystem /usr/include/libglade-2.0
+GLADE_LIBS := -L/usr/lib64 -lglade-2.0
+
+#=========================================================
+CUDA_LIBS :=  /home/dlab/pkgs/x86_64-fedora13-linux/lib/libcudart.so.3
+
+#================================================
+
+HAVE_LAMMPS := true
+
+
+#  Uncomment one of the following paths for the desired flavor
+#LAMMPS_MODE := OPENMPI
+LAMMPS_MODE := MPICH2
+#LAMMPS_MODE := SERIAL
+
+ifeq ($(LAMMPS_MODE),OPENMPI)
+
+  # OPENMPI Lammps (Mar 27, 2009)
+  #LAMMPSNEW_DIR := /home/dlab/pkgs/src/Lammps/lammps-27Mar09_openmpi
+
+  # OPENMPI Lammps (June 16, 2010)
+  LAMMPSNEW_DIR := /home/dlab/pkgs/src/Lammps/lammps-16June10_fc13_openmpi
+
+
+  LAMMPS_MPILIBS := -L/usr/lib64/openmpi/lib -lmpi_cxx -lmpi
+  LAMMPSNEW_INCS := -isystem /usr/include/openmpi-x86_64
+  LAMMPSNEW_LIBS := -llmp_openmpi $(LAMMPS_MPILIBS)
+
+endif
+
+ifeq ($(LAMMPS_MODE),MPICH2)
+
+  # MPICH2 Lammps (June 16, 2010)
+  LAMMPSNEW_DIR := /home/dlab/pkgs/src/Lammps/lammps-16June10_fc13_mpi
+
+  LAMMPS_MPILIBS := -L/usr/lib64/mpich2/lib -lmpichcxx -lmpich
+  LAMMPSNEW_INCS := -isystem /usr/include/mpich2-x86_64
+  LAMMPSNEW_LIBS := -llmp_linux $(LAMMPS_MPILIBS)
+
+endif
+
+ifeq ($(LAMMPS_MODE),SERIAL)
+
+  # Serial Lammps (Mar 27, 2009)
+  LAMMPSNEW_DIR := /home/dlab/pkgs/src/Lammps/lammps-27Mar09
+
+  # Serial Lammps (June 16, 2010)
+  #LAMMPSNEW_DIR := /home/dlab/pkgs/src/Lammps/lammps-16June10_fc13
+
+
+  LAMMPS_MPILIBS := -L$(LAMMPSNEW_DIR)/src/STUBS -lmpi
+  LAMMPSNEW_INCS := -isystem $(LAMMPSNEW_DIR)/src -isystem $(LAMMPSNEW_DIR)/src/STUBS
+  LAMMPSNEW_LIBS := -llmp_serial $(LAMMPS_MPILIBS)
+
+endif
+
+LAMMPSNEW_INCS += -isystem $(LAMMPSNEW_DIR)/src
+LAMMPSNEW_LIBS += -L$(LAMMPSNEW_DIR)/src
+
+
+LAMMPS_GPU_LIBS := -L/home/dlab/pkgs/src/Lammps/lammps-16June10_fc13_gpu/lib/gpu -lgpu $(CUDA_LIBS)
+
+
+FFTW_LIBS := -lfftw
+
+HAVE_OPENMM := true
+OPENMM_DIR  := /home/dlab/pkgs/x86_64-fedora13-linux/stow/OpenMM2.0
+#OPENMM_DIR  := /home/dlab/pkgs/src/OpenMM/OpenMM1.1-Linux64
+OPENMM_INCS := -isystem $(OPENMM_DIR)/include
+OPENMM_LIBS := -L$(OPENMM_DIR)/lib -lOpenMM
+
+
+
+
+#================================================
+HAVE_MATLAB := true
+
+#================================================
+DOXYGEN := /usr/bin/doxygen
+
+#==========================================================
+# Sphinx flags
+export HAVE_SPHINX = true
+export SPHINX	   = sphinx-build
+
+#================================================
+HAVE_LCM := true
+LCM_DIR := /home/dlab/pkgs/${YAM_TARGET}/stow/lcm-svn.2011.06.18
+LCM_INCS := -isystem ${LCM_DIR}/include
+LCM_LIBS := -L${LCM_DIR}/lib -llcm
+
+#================================================
+LIBLBFGS_INCS	:= -isystem /home/dlab/pkgs/$(YAM_TARGET)/stow/liblbfgs-1.8/include
+LIBLBFGS_LIBS	:= -L/home/dlab/pkgs/$(YAM_TARGET)/stow/liblbfgs-1.8/lib -llbfgs
+
+#================================================
+HAVE_GBSA	:= true
+
+#================================================
+HAVE_HDF5       := true
+HDF5_DIR       := /home/dlab/pkgs/$(YAM_TARGET)/stow/hdf5-1.8.4-patch1
+#HDF5_DIR        := /usr
+HDF5_LIBS       := -L$(HDF5_DIR)/lib -lhdf5_cpp -lhdf5
+HDF5_INCDIR     := $(HDF5_DIR)/include
+
+ZLIB		:= -lz
+
+#==========================================================
+# Library to read/write PGM files
+export PGM_LIBDIR = /usr/lib
+export PGM_INCDIR = /usr/include/netpbm
+export PGM_LIBS   = -L$(PGM_LIBDIR) -lnetpbm
+
+#=========================================================
+# Library to read/write PNG files
+export PNG_LIBDIR = /usr/lib
+export PNG_INCDIR = /usr/include/netpbm
+export PNG_LIBS   = -L$(PNG_LIBDIR) -lpgm
+
+#=========================================================
+CVODE_INCS	:= -isystem /usr/include/cvodes -isystem /usr/include/sundials -isystem /usr/include/nvector
+CVODE_LIBS	:= -lsundials_cvodes -lsundials_nvecserial
+
+#=========================================================
+HAVE_CHRONOENGINE := true
+#CHRONODIR := /home/phahn/project/Chronoengine/ChronoEngine
+#IRRLICHTDIR := /home/phahn/project/irrlicht-1.7.1
+
+CHRONODIR := /home/dlab/pkgs/src/ChronoEngine/ChronoEngine-100621/code/ChronoEngine
+IRRLICHTDIR := /home/dlab/pkgs/src/ChronoEngine/irrlicht-1.7.1
+
+CHRONO_INCS  := -isystem "$(CHRONODIR)/source"  -isystem "$(CHRONODIR)/source/core" -isystem "$(CHRONODIR)/source/physics" -isystem "$(CHRONODIR)/source/parallel" -isystem "$(CHRONODIR)/source/collision/bullet" -isystem "$(CHRONODIR)/source/collision/gimpact" -isystem $(IRRLICHTDIR)/include
+
+
+#-isystem "/home/phahn/project/js/src"
+
+#CHRONO_INCS  := -isystem "$(CHRONODIR)/source" -isystem "/home/phahn/project/js/src" -isystem "$(CHRONODIR)/source/core" -isystem "$(CHRONODIR)/source/physics" -isystem "$(CHRONODIR)/source/parallel" -isystem "$(CHRONODIR)/source/collision/bullet" -isystem "$(CHRONODIR)/source/collision/gimpact"
+
+CHRONOFLAGS := -DCOMPILER_GCC_64 -DLINUX -O -s -D "NDEBUG" -D "NODEBUG" -DCH_JAVASCRIPT -DXP_UNIX -DEXPORT_JS_API -DBP_USE_FIXEDPOINT_INT_32 -DCH_NOCUDA -DCHRONOENGINE_DATA=\"$(CHRONODIR)/bin/data\"
+
+#=========================================================
+HAVE_BULLET := true
+BULLET_DIR := /home/dlab/pkgs/x86_64-fedora13-linux/stow/bullet-2.78
+BULLET_INCS := -isystem $(BULLET_DIR)/include/bullet -DBT_USE_DOUBLE_PRECISION
+BULLET_COLLISION_LIBS := -L$(BULLET_DIR)/lib -lBulletCollision -lLinearMath
+BULLET_DYNAMICS_LIBS := -L$(BULLET_DIR)/lib -lBulletDynamics
+
+
+#=========================================================
+HAVE_LCPPATH := true
+#LCPPATH_DIR  := /home/dlab/pkgs/src/pathLCP/path_23.5.1_c86_64
+LCPPATH_DIR  := /home/dlab/pkgs/src/pathLCP/pathlib-101202
+LCPPATH_INCS := -isystem $(LCPPATH_DIR)/include
+
+#LCPPATH_INCS := -isystem /home/dlab/pkgs/src/pathLCP/pathlib/include
+
+#LCPPATH_LIBS := -L$(LCPPATH_DIR) -lpath47-debugBuild
+LCPPATH_LIBS := -L$(LCPPATH_DIR)/lib/linux64 -lpath47
+
+#==========================================================
+HAVE_FBX := true
+FBX_INCS := -isystem /home/dlab/pkgs/$(YAM_TARGET)/stow/fbx-2011.3/include
+FBX_LIBS := -L/home/dlab/pkgs/$(YAM_TARGET)/stow/fbx-2011.3/lib -lfbxsdk_20113_x64
+
+#==========================================================
+#
+# Patched Spice installation
+# The dpstrf_ functions have been renamed cspice_dpstrf_ to avoid symbol collision.
+#
+CSPICE_DIR	:= /home/dlab/pkgs/src/spice/modified-cspice-v62-64bit-x86_64-fedora13-linux
+
+#=========================================================
+HAVE_CEGUI := true
+CEGUI_DIR := /home/dlab/pkgs/${YAM_TARGET}/stow/cegui-0.7.5-with_ogre-1.7.3
+CEGUI_INCS := -isystem ${CEGUI_DIR}/include/CEGUI
+CEGUI_LIBS := -L${CEGUI_DIR}/lib -lCEGUIBase \
+                                 -lCEGUIExpatParser \
+                                 -lCEGUISampleHelper \
+                                 -lCEGUIFalagardWRBase \
+                                 -lCEGUITGAImageCodec \
+                                 -lCEGUIFreeImageImageCodec \
+                                 -lCEGUITinyXMLParser \
+                                 -lCEGUILibxmlParser \
+                                 -lCEGUIOgreRenderer
+
+#=========================================================
+HAVE_OPENEXR := true
+OPENEXR_INCS := -isystem /usr/include/OpenEXR
+OPENEXR_LIBS := -L/usr/lib64 -lIlmImf -lHalf
+
+#=========================================================
+HAVE_ODE	:= false
+
+#=========================================================
+HAVE_GLUT := true
+GLUT_INCS := -isystem /usr/include
+GLUT_LIBS := -L/usr/lib64 -lGL -lGLU -lglut
+
+#=========================================================
+HAVE_OPEN_SCENE_GRAPH := true
+OPEN_SCENE_GRAPH_INCS := -isystem /home/dlab/pkgs/x86_64-fedora13-linux/stow/openscenegraph-2.8.3/include
+OPEN_SCENE_GRAPH_LIBS := -L/home/dlab/pkgs/x86_64-fedora13-linux/stow/openscenegraph-2.8.3/lib -losg
+OPEN_SCENE_GRAPH_DB_LIBS := -losgDB
+
+#=========================================================
+COVERAGEPY := /home/dlab/pkgs/x86_64-fedora13-linux/bin/coverage
+COVERAGEPY_OUTDIR := /home/dlab/repo/www/DLabDocs/coveragepy
+COVERAEPY_PYTHONPATH := /home/dlab/pkgs/x86_64-fedora13-linux/lib/python2.6/site-packages
+
+#=========================================================
+LCOV 		:= /home/dlab/pkgs/x86_64-fedora13-linux/bin/lcov
+GENHTML		:= /home/dlab/pkgs/x86_64-fedora13-linux/bin/genhtml
+COVERAGEDIR	:= /home/dlab/repo/www/DLabDocs/coverage
+
+#=========================================================
+CPPCHECK	:= /home/dlab/pkgs/x86_64-fedora13-linux/bin/cppcheck
+CPPCHECK_HTML	:= /home/dlab/pkgs/x86_64-fedora13-linux/bin/cppcheck-htmlreport
+CPPCHECK_OUTDIR	:= /home/dlab/repo/www/DLabDocs/cppcheck
+
+#=========================================================
+DKWSTYLE	:= /home/dlab/pkgs/bin/dkwstyle-html
+DKWSTYLE_OUTDIR	:= /home/dlab/repo/www/DLabDocs/codingstyle
+
+#=========================================================
+DPYLINT := /home/dlab/pkgs/bin/dpylint-html
+DPYLINT_OUTDIR := /home/dlab/repo/www/DLabDocs/dpylint

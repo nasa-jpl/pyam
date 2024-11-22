@@ -1,0 +1,223 @@
+# this file defines site-specific paths etc. and is included by the
+# Makefiles. It should be customized for each site.
+
+HAVE_MATHEMATICA = true
+
+USE_PURIFY = false
+
+#==========================================================
+
+PURIFY_CACHE_DIR = $(YAM_ROOT)/purify-cache
+PURIFY = /TPS/V12/bin/purify -cache-dir=$(PURIFY_CACHE_DIR)
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+HAVE_TRAMEL		= true
+export HAVE_MATHEMATICA	= true
+export HAVE_TMATH	= true
+
+#==========================================================
+#USE_GCC3	:= true
+
+include $(SITEDEFSHOME)/sites/site.gcc
+
+GCCDIR	:= /home/atbe/pkgs/sparc-sunos5.7/stow/gcc-3.2.1
+
+#LIBGCC = -L/home/atbe/pkgs/lib/gcc-lib/sparc-sun-solaris2.7/2.95.2 -lgcc
+#LIBGCC			= -L$(GCCDIR)/lib/gcc-lib/sparc-sun-solaris2.7/3.2.1 -lgcc
+#LIBGCC = -lgcc
+
+# actually do not need LIBGCC if use gcc as the linker instead of ld
+export LIBGCC
+
+#LIBSTDCPP		= -L$(GCCDIR)/lib -lstdc++
+# need to add libgcc_s since libstdc++ needs it at run-time
+LIBSTDCPP		:= -lstdc++ -lgcc_s
+#LIBSTDCPP		= $(GCCDIR)/lib/libstdc++.so
+export LIBSTDCPP
+#LIBF77		= -L$(GCCDIR)/lib -lg2c
+#LIBF77		= -lg2c
+#LIBF77		= $(GCCDIR)/lib/libg2c.so
+
+# need to add the -R option so that libg2c is found at run-time when
+# g77 is used as the linker (eg. marsGRAM)
+F77		:= $(GCCDIR)/bin/g77 -R$(GCCDIR)/lib
+LINKER_F77      := $(F77)
+
+# This flag is needed for dealing with screwed up X11 header files that
+# gcc 2.95 will choke on
+FPERMISSIVE_OPT = -fpermissive
+
+ifeq ($(USE_PURIFY),true)
+  CC = $(PURIFY) $(GCCDIR)/bin/gcc -g
+  CPLUSPLUS := $(PURIFY) $(CC) -g
+else
+  CC = $(GCCDIR)/bin/gcc
+  CPLUSPLUS := $(CC)
+endif
+
+#==========================================================
+# profiling options
+#_PROF			:= true
+ifeq ($(_PROF),true)
+  CC_COMPILE_FLAGS	+= -pg
+  CPLUSPLUS_COMPILE_FLAGS += -pg
+  CC_LINK_FLAGS		+= -pg
+  CPLUSPLUS_LINK_FLAGS  += -pg
+  BUILDING_SHARED_LIBS	:= false
+else
+  CC_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  F77_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+  CPLUSPLUS_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+endif
+
+
+# are we building our own shared libraries?
+BUILDING_SHARED_LIBS ?= true
+export BUILDING_SHARED_LIBS
+
+ifeq ($(BUILDING_SHARED_LIBS),true)
+#  CC_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+#  CPLUSPLUS_COMPILE_FLAGS += $(SHARED_COMPILE_FLAG)
+
+
+#  GCC_EXEC_PREFIX = /home/atbe/pkgs/lib/gcc-lib/sparc-sun-solaris2.7/2.95.2
+#  LD_SHARED = $(LD) -G -L$(YAM_ROOT)/lib/$(YAM_NATIVE) -L$(GCC_EXEC_PREFIX)
+  LD_SHARED = $(CC) -shared -L$(YAM_ROOT)/lib/$(YAM_NATIVE)
+  export LD_SHARED
+#  CC_EXTRA_SHLIB = $(LIBGCC)
+  export CC_EXTRA_SHLIB
+endif
+
+
+
+
+#==========================================================
+ifneq ($(USE_SHARED_LIBS),false)
+ export SHARED_LIBDIR = /home/atbe/pkgs/lib/$(YAM_TARGET)-shared
+# CC_LINK_FLAGS += -L$(SHARED_LIBDIR) -R$(SHARED_LIBDIR) -R$(YAM_ROOT)/lib/$(YAM_NATIVE)
+ CC_LINK_FLAGS += -R$(GCCDIR)/lib -L$(SHARED_LIBDIR) -R$(SHARED_LIBDIR)
+# CPLUSPLUS_LINK_FLAGS += -L$(SHARED_LIBDIR) -R$(SHARED_LIBDIR) -R$(YAM_ROOT)/lib/$(YAM_NATIVE)
+ CPLUSPLUS_LINK_FLAGS += -R$(GCCDIR)/lib -L$(SHARED_LIBDIR) -R$(SHARED_LIBDIR)
+endif
+
+#==========================================================
+# for X11
+export X11_INCDIR       = -I/usr/openwin/include
+export X11_LIBDIR       = /share/openwin/lib
+
+#==========================================================
+# for TCL
+  export HAVE_TCL	= true
+  export TCL_VERSION	= 8.0
+  export TCL_SRCDIR	= /home/atbe/pkgs/src/tcl+tk/tcl8.3.3
+  export TCL_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)-shared
+  export TCL_INCDIR	= -I/home/atbe/pkgs/include/tcl8.3
+  export TCL_LIBS	= -L$(TCL_LIBDIR) -ltcl8.3 -ldl -lm
+
+  ifeq ($(USE_PURIFY),true)
+    TCL_LIBS  += -L$(PURIFY_CACHE_DIR)/usr/lib
+  endif
+
+  # for TK
+  export HAVE_TK	= true
+  export TK_VERSION	= 8.0
+  export TK_SRCDIR	= /home/atbe/pkgs/src/tcl+tk/tk8.3.3
+  export TK_LIBDIR	= $(TCL_LIBDIR)
+  export TK_INCDIR	= $(TCL_INCDIR) -I/home/atbe/pkgs/include/tk8.3
+  export TK_LIBS	= -L$(TK_LIBDIR) -ltk8.3 -lX11 $(TCL_LIBS)
+
+  # for TIX
+  export HAVE_TIX	= true
+  export TIX_LIBDIR	= $(TCL_LIBDIR)
+  export TIX_INCDIR	= $(TK_INCDIR) -I/home/atbe/pkgs/include/tix8.2/generic
+  export TIX_LIBS	= -L$(TIX_LIBDIR) -ltix8.2 $(TK_LIBS)
+
+#==========================================================
+# for SWIG
+#SWIG	:= /home/atbe/pkgs/src/SWIG/SWIG1.1p5/bin/swig
+#SWIG	:= /home/atbe/pkgs/src/SWIG/SWIG-1.3.9/bin/swig
+#SWIG	:= /home/atbe/pkgs/src/SWIG/SWIG-1.3.13-sparc-sunos5.7/swig
+#SWIG	:= /home/atbe/pkgs/src/SWIG/SWIG-1.3.16-sparc-sunos5.7/swig
+SWIG	:= /home/atbe/pkgs/sparc-sunos5.7/stow/SWIG1.3.18/bin/swig
+
+#==========================================================
+# Motif flags
+export MOTIF_LIBS = -L/usr/dt/lib -R/usr/dt/lib -lXm
+export MOTIF_INCDIR = -I/usr/dt/include
+
+#==========================================================
+# Doxygen flags
+export HAVE_DOXYGEN = true
+#export DOXYGEN = /home/atbe/pkgs/src/doxygen/doxygen-1.2.18-20021020-sparc-sunos5.7/bin/doxygen
+export DOXYGEN = /home/atbe/pkgs/src/doxygen/doxygen-1.3-rc3-solaris/bin/doxygen
+
+#==========================================================
+# for OpenInventor
+export HAVE_IV		= true
+IV_VERSION		= 2.1.5
+export IV_INCDIR	=  /home/atbe/pkgs/include/Inventor-$(IV_VERSION)
+ifeq ($(IV_VERSION),2.1.5)
+  IV_CFLAGS		= -D__sgi
+endif
+export IV_CFLAGS
+
+#IV_LIB_DIR		= /home/atbe/pkgs/lib/$(YAM_TARGET)
+#export IV_LIB		= -L$(IV_LIB_DIR) -lInventor-$(IV_VERSION)
+#export IV_XT_LIB	= -L$(IV_LIB_DIR) -lInventorXt-$(IV_VERSION)
+
+
+IV_LIB_DIR		= /home/atbe/pkgs/src/OpenInventor/OpenInventor-2.1.5-9-sparc-sunos5.7/lib
+export IV_LIB		= $(IV_LIB_DIR)/libInventor.so
+export IV_XT_LIB	= $(IV_LIB_DIR)/libInventorXt.so
+export IV_FL_LIB	= -L/home/atbe/pkgs/lib/$(YAM_TARGET) -lFL-$(IV_VERSION)
+export IV_IMG_LIB	= -limage-$(IV_VERSION)
+export JPEG_LIBS	= -ljpeg
+
+export GL_LIBS		= -lGL -lGLU -lXt -lX11
+
+export IV_LIBS		= $(IV_XT_LIB) $(IV_LIB) $(IV_FL_LIB) \
+			  $(IV_IMG_LIB) $(JPEG_LIBS) $(MOTIF_LIBS) -lXt -lX11 -ldl
+
+#==========================================================
+# have Meemong's libsite and lipc libraries?
+#HAVE_LIBSITE		= true
+#HAVE_LIBIPC		= true
+
+#==========================================================
+# this extra library is needed for using with the sparcSol2.5 libraries
+HAVE_NDDS		= false
+NDDS_LIBS		+= -lthread
+NDDS_SOLIBS		+= -lthread
+
+#==========================================================
+# set MATLAB_LIBS to its target specific path
+export HAVE_MATLAB      = true
+export HAVE_SIMULINK    = true
+export HAVE_RTW         = true
+export MATLAB_INCDIR    = -I$(MATLAB)/extern/include
+export SIMULINK_INCDIR  = $(MATLAB_INCDIR) -I$(MATLAB)/simulink/include
+export RTW_INCDIR       = $(SIMULINK_INCDIR) -I$(MATLAB)/rtw/c/libsrc -I$(MATLAB)/rtw/c/src
+export MATLAB_LIBDIR    = $(MATLAB)/extern/lib/sol2
+export MATLAB_LIBS      = -R$(MATLAB_LIBDIR) -L$(MATLAB_LIBDIR) -leng -lmat -lmx -lmi -lut
+
+#==========================================================
+# for Mathematica
+export MATHEMATICA_BASEDIR = /v/math/AddOns/MathLink/DevelopersKits/Solaris/CompilerAdditions
+export MATHEMATICA_LIBDIR = $(MATHEMATICA_BASEDIR)
+export MATHEMATICA_INCDIR = $(MATHEMATICA_BASEDIR)
+export MATHEMATICA_BINDIR = $(MATHEMATICA_BASEDIR)
+export MATHEMATICA_LIBS	  = -L$(MATHEMATICA_LIBDIR) -lML
+
+#==========================================================
+# for Tmath
+export TMATH_LIBDIR	= /home/atbe/pkgs/lib/$(YAM_TARGET)
+export TMATH_INCDIR	=
+export TMATH_LIBS	= -L$(TMATH_LIBDIR) -ltmath -lexttools \
+			   $(MATLAB_LIBS) $(MATHEMATICA_LIBS) \
+			   -ltmathkernel -lstdc++
+#==========================================================
+# machine vision libraries
+MV_LIBDIR 			:= $(MVDIR)/../lib/sparcSol2

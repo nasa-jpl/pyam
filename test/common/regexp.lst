@@ -1,0 +1,13 @@
+^---$
+^[0-9]+[acd][0-9]+$
+^[0-9]+[acd][0-9]+,[0-9]+$
+^[0-9]+,[0-9]+[acd][0-9]+,[0-9]+$
+^[0-9]+,[0-9]+[acd][0-9]+$
+^[><] Ran [0-9]+ test[s]? in [0-9]+\.[0-9]+s$
+^[><] \.+$
+.*:.*:.*
+FakeSandbox
+^[><] BRANCH_Dshell\+\+  = Dshell\+\+-R4-06g\s*[a-zA-Z]+$
+^[><] BRANCH_DshellEnv = DshellEnv-R1-49r\s*[a-zA-Z]+$
+^[><] # BRANCH_Dshell\+\+  = Dshell\+\+-R4-06f\s*[a-zA-Z]+$
+^[><] # BRANCH_DshellEnv = DshellEnv-R1-44e\s*[a-zA-Z]+$

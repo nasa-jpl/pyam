@@ -1,0 +1,184 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site-config-i486-fedora3-linux
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+CC              = /usr/bin/gcc
+CPLUSPLUS       = /usr/bin/gcc
+F77             = /usr/bin/gfortran
+LINKER_F77      := $(F77)
+LIBF77          := -lgfortran
+LIBG2C          := /usr/lib/libg2c.so.0
+LIBSTDCPP       = -lstdc++
+
+HAVE_TCL	:= false
+
+#==========================================================
+# for Python
+export HAVE_PYTHON    := true
+PYTHONDIR             := $(TPS_DIR)
+export PYTHON_INCDIR  := -I$(PYTHONDIR)/include/python2.6
+export PYTHON_LIBS    := -L$(PYTHONDIR)/lib/python2.6/config -lpython2.6
+
+# -lpthread -ldl -lutil
+
+# for Python static library
+#PYTHON_LIBS    += -L/usr/lib/python2.4/config
+
+ifeq ($(PYTHONPATH),)
+#  PYTHONPATH	:= /home/atbe/pkgs/src/Python/installs/i486-fedora4-linux/2.4.1/lib/python
+else
+#  PYTHONPATH	:= $(PYTHONPATH):/home/atbe/pkgs/src/Python/installs/i486-fedora4-linux/2.4.1/lib/python
+endif
+export  PYTHONPATH
+
+PYTHON_BIN	:= $(TPS_DIR)/bin/python
+
+#==========================================================
+
+GTK_INCLUDES := -I/usr/include/gtk-2.0 -I/usr/include/cairo \
+                       -I/usr/include/glib-2.0 -I/usr/include/pango-1.0 \
+                       -I/usr/lib/glib-2.0/include -I/usr/lib/gtk-2.0/include \
+                       -I/usr/include/atk-1.0
+
+#==========================================================
+# add other flag settings that are specific to this site/target build
+
+
+HAVE_SOXT = true
+SOXT_CFLAGS = -I$(TPS_DIR)/include
+SOXT_LIBS = -L$(TPS_DIR)/lib -lSoXt
+XT_LIBS   := -lXmu -lXt -lXi -lXpm -lXp
+
+HAVE_SOQT := false
+
+
+#==========================================================
+# Disable Coin. This should disable building Dspace(Coin).
+HAVE_COIN := false
+COIN_DIR     := $(TPS_DIR)
+COIN_INC     :=  \
+                -I$(COIN_DIR)/include \
+                -D_REENTRANT -DCOIN3D
+
+COIN_LIBS       := \
+                -L$(COIN_DIR)/lib -lCoin  \
+                -L$(TPS_DIR)/lib -lsimage
+
+HAVE_COINSHADERS := true
+
+#==========================================================
+
+GLEW_CFLAGS = -I$(TPS_DIR)/include
+GLEW_LIBS = -L$(TPS_DIR)/lib -lGLEW -lglut
+
+#==========================================================
+export GL_LIBS          = -L/usr/X11R6/lib -lGLU -Wl,-Bdynamic -lGL
+
+MOTIF_LIBS	 :=  -L/usr/X11R6/lib  -lXm
+
+#==========================================================
+# disable the Dshell audit compilation flags
+ENABLE_AUDIT_CODE    := false
+
+export LIBXML2_LIBS = -L/usr/lib -lxml2
+
+#==========================================================
+# enable MASL builds
+HAVE_MASL = true
+MASL_LIBS       := /afs/jpl.nasa.gov/group/mas/programs/MASLlibs/linux/MASLlibs.current/dp-spice.a /afs/jpl.nasa.gov/group/mas/programs/MASLlibs/linux/MASLlibs.current/dp-vector.a
+
+#===========================================================
+
+JPLV_INCS	:= -I$(TPS_DIR)/include
+JPLV_LIBS	:= -L$(TPS_DIR)/lib -ljplv
+
+
+#================================================
+HAVE_HDF5	 := true
+HDF5_INCDIR	 := $(TPS_DIR)/include
+HDF5_LIBS	 := -L$(TPS_DIR)/lib  -lhdf5_cpp -lhdf5
+
+#================================================
+CSPICE_DIR	 := $(TPS_DIR)/cspice
+
+#================================================
+HAVE_LCM := true
+LCM_INCS := -I$(TPS_DIR)/include
+LCM_LIBS := -L$(TPS_DIR)/lib -llcm
+
+#================================================
+CVODE_INCS	:= -I$(TPS_DIR)/include/cvodes -I$(TPS_DIR)/include/sundials -I$(TPS_DIR)/include/nvector
+CVODE_LIBS	:= -L$(TPS_DIR)/lib -lsundials_cvodes -lsundials_nvecserial
+
+#================================================
+# This version of Boost is built with multithread support.
+HAVE_BOOST := true
+BOOST_INCS := -I$(TPS_DIR)/include -DNO_BOOST_LOG
+
+HAVE_BOOST_LOG := false
+BOOST_LOG_LIBS :=
+
+HAVE_BOOST_REGEX := true
+BOOST_REGEX_LIBS := -L$(TPS_DIR)/lib -lboost_regex
+
+#================================================
+HAVE_OGRE := true
+OGRE_DIR := $(TPS_DIR)
+OGRE_CFLAGS := -DOGRE_DOUBLE_PRECISION=1 -I$(OGRE_DIR)/include/OGRE
+OGRE_LIBS := -L$(OGRE_DIR)/lib -lOgreMain
+
+#================================================
+HAVE_OIS := true
+OIS_CFLAGS := -I$(TPS_DIR)/include/OIS
+OIS_LIBS := -L$(TPS_DIR)/lib -lOIS
+
+#================================================
+SWIG_PATH := $(TPS_DIR)
+SWIG_VERSION  := 1.3.40
+
+SWIG_PYTHON_OPTS := -O -threads -keyword -nodefaultctor -nofastproxy -noproxyimport -w511
+SWIG := $(SWIG_PATH)/bin/swig
+SWIG_PYTHON_INC := $(SWIG_PYTHON_OPTS) -I$(SWIG_PATH)/share/swig/$(SWIG_VERSION)/python -I$(SWIG_PATH)/share/swig/$(SWIG_VERSION)
+
+#================================================
+LIBLBFGS_INCS := -I$(TPS_DIR)/include
+LIBLBFGS_LIBS := -L$(TPS_DIR)/lib -llbfgs
+
+#================================================
+
+HAVE_GTK := true
+GTK_INCLUDES := -I$(TPS_DIR)/include/gtk-2.0 -I$(TPS_DIR)/lib/gtk-2.0/include \
+                -I$(TPS_DIR)/include/atk-1.0 -I$(TPS_DIR)/include/cairo \
+                -I$(TPS_DIR)/include/pango-1.0 -I$(TPS_DIR)/include/glib-2.0 \
+                -I$(TPS_DIR)/lib/glib-2.0/include -I$(TPS_DIR)/include/pixman-1 \
+                -I$(TPS_DIR)/include/freetype2 -I$(TPS_DIR)/include \
+                -I$(TPS_DIR)/include -I$(TPS_DIR)/include/libpng14
+
+GTK_LIBS := -lgtk-x11-2.0
+
+#================================================
+HAVE_GLADE := true
+GLADE_INCS := -I$(TPS_DIR)/include/libglade-2.0
+GLADE_LIBS := -L$(TPS_DIR)/lib -lglade-2.0
+
+#================================================
+PYGTK_INCLUDES := -I$(TPS_DIR)/include/pygtk-2.0 \
+                  -I$(TPS_DIR)/include/pygtk-2.0 \
+                  -I$(TPS_DIR)/include/glib-2.0 \
+                  -I$(TPS_DIR)/lib/glib-2.0/include
+
+PYGTK_LIBS := -L$(TPS_DIR)/lib -lgobject-2.0 -lglib-2.0
+
+#================================================

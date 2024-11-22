@@ -1,0 +1,37 @@
+#!/bin/bash
+#
+# Script to determine YAM_ROOT starting from a directory or executable, by
+# looking for YAM.config as well as common/YAM.modules in parent directories.
+
+readonly ORIGINAL_DIRECTORY="$PWD"
+
+if [ "X$YAM_ROOT" != "X" ]
+then
+    echo "$YAM_ROOT"
+    exit 0
+fi
+
+# Search for YAM.config.
+current_directory=$(readlink -f "$ORIGINAL_DIRECTORY")
+while [ "$current_directory" != "/" ]
+do
+    if test -f "$current_directory/YAM.config"
+    then
+        # Clean up directory name.
+        cd "$current_directory"
+        if [ $? -ne 0 ]
+        then
+            echo "$current_directory: not found"
+            exit 1
+        fi
+        current_directory="$PWD"
+
+        echo "$current_directory"
+        exit 0
+    else
+        current_directory=$(dirname "$current_directory")
+    fi
+done
+
+echo "Error: no YAM.config was found in or above $ORIGINAL_DIRECTORY"
+exit 1

@@ -1,0 +1,6 @@
+ERROR: "speeeeling" is misspelled at should_fail.py:1
+ERROR: "baaaad" is misspelled at should_fail.py:3
+ERROR: "test-baaaad" is misspelled at should_fail.py:6
+ERROR: "baaad" is misspelled at should_fail.py:8
+ERROR: "seeentence" is misspelled at should_fail.py:9
+ERROR: "baaaaad" is misspelled at should_fail.py:11

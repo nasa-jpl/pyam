@@ -1,0 +1,202 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# this file defines build flags that are specific to a
+# build target for a specific YaM site.
+# It should be customized for each site/target combination.
+
+#==========================================================
+# include site specific stuff
+include $(SITEDEFSHOME)/sites/$(YAM_SITE)/site.local
+
+ifeq ($(USE_GCC295),)
+   F77	      = /usr/bin/f77
+   LIBF77     =
+   LINKER_F77			:= $(F77)
+else
+   GCCDIR = /home/atbe/pkgs/mips-irix6.5/stow/gcc-3.3.1
+#   F77	      = /home/atbe/pkgs/bin/mips-irix6.5/g77
+   F77		:= $(GCCDIR)/bin/g77
+   LIBF77     =
+   LINKER_F77			:= $(F77)
+endif
+
+BUILDING_SHARED_LIBS  = true
+USE_SHARED_LIBS	      = true
+
+# using StethoScope 5.0x version for this target
+#SCOPE_50 = true
+
+#==========================================================
+#include $(SITEDEFSHOME)/site.common
+ifeq ($(USE_GCC295),true)
+  include $(SITEDEFSHOME)/sites/site.gcc
+endif
+
+ifeq ($(USE_GCC295),true)
+     CC				= $(GCCDIR)/bin/gcc
+#     LIBSTDCPP			= -L/home/atbe/pkgs/lib/gcc-lib/mips-sgi-irix6.5/3.3.1 -lstdc++
+     LIBSTDCPP			= -lstdc++
+     CPLUSPLUS			:= $(CC)
+     CC_COMPILE_FLAGS		+= $(SHARED_COMPILE_FLAG)
+     CPLUSPLUS_COMPILE_FLAGS	+= $(SHARED_COMPILE_FLAG)
+#     CPLUSPLUS_WARNINGS	= $(CC_WARNINGS)
+else
+     CC				:= /usr/bin/cc
+     CPLUSPLUS			:= /usr/bin/CC
+     LD				:= $(CPLUSPLUS)
+     CC_DEPEND_FLAG		:= -M
+     CPLUSPLUS_DEPEND_FLAG	:= $(CC_DEPEND_FLAG)
+     CPLUSPLUS_DEFINES		+= $(CC_DEFINES)
+     CPLUSPLUS_WARNINGS		= $(CC_WARNINGS)
+     CC_OPTIMIZATION		:= -g3 -O3
+     CPLUSPLUS_OPTIMIZATION	:= -g3 -O3
+endif
+
+#GCC_EXEC_PREFIX = /home/atbe/pkgs/lib/gcc-lib/mips-sgi-irix6.5/3.3.1
+#LIBGCC = -L$(GCC_EXEC_PREFIX) -lgcc
+
+#==========================================================
+# are we building our own shared libraries?
+ifeq ($(BUILDING_SHARED_LIBS),)
+  BUILDING_SHARED_LIBS = true
+endif
+export BUILDING_SHARED_LIBS
+
+ifeq ($(BUILDING_SHARED_LIBS),true)
+  ifeq ($(USE_GCC295),true)
+    export LD_SHARED = $(CC) -shared -L$(YAM_ROOT)/lib/$(YAM_NATIVE)
+  else
+    export LD_SHARED = $(LD) -shared -L$(YAM_ROOT)/lib/$(YAM_NATIVE)
+  endif
+endif
+
+#==========================================================
+# are we building with third party shared libraries?
+ifneq ($(USE_SHARED_LIBS),false)
+  export SHARED_LIBDIR = /home/atbe/pkgs/lib/$(YAM_TARGET)-shared
+  CC_LINK_FLAGS += -L$(SHARED_LIBDIR)
+  CPLUSPLUS_LINK_FLAGS += -L$(SHARED_LIBDIR)
+  ifeq ($(USE_GCC295),true)
+     CC_EXTRA_SHLIB = -lgcc
+  endif
+  export CC_EXTRA_SHLIB
+endif
+
+#==========================================================
+# for TCL
+export HAVE_TCL         = true
+export TCL_LIBDIR       = /home/atbe/pkgs/lib/mips-irix6.5-shared
+#ifeq ($(USE_GCC295),true)
+  export TCL_INCDIR       = -I/home/atbe/pkgs/include/tcl8.3
+  # need -lgcc even for native compiler because the existing Tcl is
+  # built using gcc and so need the eprintf symbol from libgcc
+  export TCL_LIBS         = -L$(TCL_LIBDIR) -ltcl8.1 -lm $(LIBGCC)
+#else
+#  export TCL_INCDIR       = -I/home/atbe/pkgs/include/tcl8.1
+#  export TCL_LIBS         = -L$(TCL_LIBDIR) -ltcl8.1  -lm
+   export TCL_LIBS         = -L$(TCL_LIBDIR) -ltcl8.3 -lm
+#endif
+
+export TCL_INCDIR       = -I/home/atbe/pkgs/include/tcl8.3
+# need -lgcc even for native compiler because the existing Tcl is
+# built using gcc and so need the eprintf symbol from libgcc
+#export TCL_LIBS         = -L$(TCL_LIBDIR) -ltcl8.3 -lm $(LIBGCC)
+
+# for TK
+export HAVE_TK          = true
+export TK_LIBDIR        = $(TCL_LIBDIR)
+export TK_INCDIR        = $(TCL_INCDIR) -I/home/atbe/pkgs/include/tk8.3
+export TK_LIBS          = -L$(TK_LIBDIR) -ltk8.3 -lX11 $(TCL_LIBS)
+
+# for TIX
+export HAVE_TIX         = true
+export TIX_LIBDIR       = $(TCL_LIBDIR)
+export TIX_INCDIR       = $(TK_INCDIR) -I/home/atbe/pkgs/include/tix8.2/generic
+export TIX_LIBS         = -L$(TIX_LIBDIR) -ltix8.2 $(TK_LIBS)
+
+#==========================================================
+# for OpenInventor
+ifndef HAVE_IV
+  export HAVE_IV = true
+endif
+export IV_INCDIR =  /home/atbe/pkgs/include
+export IV_LIB = /usr/lib32/libInventor.so.3
+export IV_XT_LIB =  /usr/lib32/libInventorXt.so.3
+#export JPEG_LIBS = -L/home/atbe/pkgs/lib/$(YAM_TARGET) -ljpeg
+#export GL_LIBS = -lGL -lGLU
+
+#export IV_LIBS = $(IV_XT_LIB) $(IV_LIB) $(IV_FL_LIB) $(IV_IMG_LIB)
+#$(JPEG_LIBS) $(GL_LIBS) $(MOTIF_LIBS) -lXt -lX11
+export IV_LIBS = $(IV_XT_LIB) $(IV_LIB)
+
+#==========================================================
+# for TRAMEL
+export HAVE_TRAMEL	= false
+
+#==========================================================
+export MOTIF_LIBS = -lXm
+
+#==========================================================
+# have Meemong's libsite and lipc libraries?
+#ifneq ($(USE_GCC295),true)
+#  HAVE_LIBSITE	= true
+#  HAVE_LIBIPC	= true
+#else
+#  HAVE_LIBSITE	:= false
+#  HAVE_LIBIPC	:= false
+#  USE_SITE_TERRAIN := false
+#endif
+
+#==========================================================
+HAVE_NDDS = false
+
+#==========================================================
+# for RTI's Stethoscope
+# While libscope v5.0c is installed, it appears to need the
+# vtbl__9type_info symbol from /usr/lib32/libC.so. However this
+# conflicts with building with gcc, so this version of Scope does not
+# work for SGIs
+ifeq ($(USE_GCC295),true)
+  HAVE_SCOPE = false
+else
+  HAVE_SCOPE = true
+endif
+STETHOSCOPEHOME = /home/atbe/pkgs/src/rti/scope.5.3b-irix6.5
+RTILIBHOME=$(RTIHOME)/rtilib.4.0b-irix6.5
+export SCOPE_INCDIR     = -I$(STETHOSCOPEHOME)/include/$(RTI_OS) \
+                                -I$(STETHOSCOPEHOME)/include/share \
+				-I$(RTILIBHOME)/include/share
+export SCOPE_LIBS       = $(STETHOSCOPEHOME)/lib/$(RTI_TARGET)/libscope.a \
+                              $(RTILIBHOME)/lib/$(RTI_TARGET)/libutilsip.a
+ifdef SCOPE_50
+  SCOPE_INCDIR    += -DSCOPE_50
+endif
+
+#==========================================================
+# for Matlab
+export HAVE_MATLAB      = false
+export HAVE_SIMULINK    = false
+export HAVE_RTW         = false
+export MATLAB           = /v/matlab/sgi
+export MATLAB_INCDIR    = -I$(MATLAB)/extern/include
+export SIMULINK_INCDIR  = $(MATLAB_INCDIR) -I$(MATLAB)/simulink/include
+export RTW_INCDIR       = $(SIMULINK_INCDIR) -I$(MATLAB)/rtw/c/libsrc -I$(MATLAB)/rtw/c/src
+export MATLAB_LIBDIR    = $(MATLAB)/extern/lib/sgi
+export MATLAB_LIBS      = -R$(MATLAB_LIBDIR) -L$(MATLAB_LIBDIR) -leng -lmat -lmx -lmi -lut
+
+#==========================================================
+# for libxml2 (XML parser library - settings obtained from `xml2-config --cflags` & `xml2-config --libs` )
+export LIBXML2_CFLAGS = -I/home/atbe/pkgs/mips-irix6.5/stow/libxml2-2.5.9/include/libxml2
+export LIBXML2_LIBS = -L/home/atbe/pkgs/mips-irix6.5/stow/libxml2-2.5.9/lib -lxml2 -lz -lpthread -lm
+
+#==========================================================
+# Library to read/write PGM files
+export PGM_LIBDIR = /usr/lib32
+export PGM_INCDIR = /usr/include
+export PGM_LIBS   = -L$(PGM_LIBDIR) -lpgm
+
+#==========================================================

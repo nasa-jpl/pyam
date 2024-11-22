@@ -1,0 +1,16 @@
+########################################################################
+#
+#      !!!!!! EDIT & CUSTOMIZE THIS FILE !!!!!!
+#
+########################################################################
+#
+# Defines build flags specific for a YaM site.
+#
+# This file is typically included by the individual site/target
+# specific site-config-<target> files
+
+#==========================================================
+# load in generic flag settings
+include $(SITEDEFSHOME)/sites/shared.mk
+
+# Add additional flag definitions here

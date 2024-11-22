@@ -1,0 +1,10 @@
+Fri Sep  2  9:45:42 2011	Steven Myint (myint)
+
+	* version R1-79z
+	BUGS:
+	FILES: fornat(233785), site-config-x86_64-fedora15-linux(233785),
+		site-vars.sh(233785), sites(233785)
+	Added new Fedora 15 package paths for fornat.
+
+	FILES: site-vars.sh(233786), sites(233786), telerobotics(233786)
+	Added /home/dlab/pkgs/${YAM_TARGET} libs.

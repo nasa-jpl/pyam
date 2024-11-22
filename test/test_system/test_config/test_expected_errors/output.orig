@@ -1,0 +1,5 @@
+pyam: error: unrecognized arguments: --to-work FakeModule
+OK
+    raise ValueError("The --branch option can only be used with the --all-to-work option")
+ValueError: The --branch option can only be used with the --all-to-work option
+OK
